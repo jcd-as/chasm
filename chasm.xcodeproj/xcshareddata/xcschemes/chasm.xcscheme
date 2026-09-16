@@ -54,6 +54,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "foo.chasm"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/jcs/src/chasm/chasm/chasm.swift"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
