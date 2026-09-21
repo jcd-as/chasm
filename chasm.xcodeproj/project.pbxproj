@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		01C723AE3060A2FD002F3C5F /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = 01C723AD3060A2FD002F3C5F /* ArgumentParser */; };
 		01FEF6C13059E9910016BD00 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = 01FEF6C03059E9910016BD00 /* ArgumentParser */; };
 /* End PBXBuildFile section */
 
@@ -22,18 +23,44 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		01C723A530609B85002F3C5F /* chasmTest.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = chasmTest.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		01FEF6B33059E4950016BD00 /* chasm */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = chasm; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		01C723B13060A432002F3C5F /* Exceptions for "chasm" folder in "chasmTest" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				chasm.swift,
+				opcodes.swift,
+			);
+			target = 01C723A430609B85002F3C5F /* chasmTest */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		01C723A630609B85002F3C5F /* chasmTest */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = chasmTest;
+			sourceTree = "<group>";
+		};
 		01FEF6B53059E4950016BD00 /* chasm */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				01C723B13060A432002F3C5F /* Exceptions for "chasm" folder in "chasmTest" target */,
+			);
 			path = chasm;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		01C723A230609B85002F3C5F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				01C723AE3060A2FD002F3C5F /* ArgumentParser in Frameworks */,
+			);
+		};
 		01FEF6B03059E4950016BD00 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
@@ -43,10 +70,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		01C723AC3060A2FD002F3C5F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		01FEF6AA3059E4950016BD00 = {
 			isa = PBXGroup;
 			children = (
 				01FEF6B53059E4950016BD00 /* chasm */,
+				01C723A630609B85002F3C5F /* chasmTest */,
+				01C723AC3060A2FD002F3C5F /* Frameworks */,
 				01FEF6B43059E4950016BD00 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -55,6 +91,7 @@
 			isa = PBXGroup;
 			children = (
 				01FEF6B33059E4950016BD00 /* chasm */,
+				01C723A530609B85002F3C5F /* chasmTest.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -62,6 +99,27 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		01C723A430609B85002F3C5F /* chasmTest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 01C723A930609B85002F3C5F /* Build configuration list for PBXNativeTarget "chasmTest" */;
+			buildPhases = (
+				01C723A130609B85002F3C5F /* Sources */,
+				01C723A230609B85002F3C5F /* Frameworks */,
+				01C723A330609B85002F3C5F /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				01C723A630609B85002F3C5F /* chasmTest */,
+			);
+			name = chasmTest;
+			packageProductDependencies = (
+				01C723AD3060A2FD002F3C5F /* ArgumentParser */,
+			);
+			productName = chasmTest;
+			productReference = 01C723A530609B85002F3C5F /* chasmTest.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		01FEF6B23059E4950016BD00 /* chasm */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 01FEF6BA3059E4950016BD00 /* Build configuration list for PBXNativeTarget "chasm" */;
@@ -93,6 +151,9 @@
 				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					01C723A430609B85002F3C5F = {
+						CreatedOnToolsVersion = 27.0;
+					};
 					01FEF6B23059E4950016BD00 = {
 						CreatedOnToolsVersion = 27.0;
 					};
@@ -116,11 +177,25 @@
 			projectRoot = "";
 			targets = (
 				01FEF6B23059E4950016BD00 /* chasm */,
+				01C723A430609B85002F3C5F /* chasmTest */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		01C723A330609B85002F3C5F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		01C723A130609B85002F3C5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 		01FEF6AF3059E4950016BD00 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
@@ -129,6 +204,40 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		01C723AA30609B85002F3C5F /* Debug configuration for PBXNativeTarget "chasmTest" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jcd-as.chasmTest";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		01C723AB30609B85002F3C5F /* Release configuration for PBXNativeTarget "chasmTest" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jcd-as.chasmTest";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		01FEF6B83059E4950016BD00 /* Debug configuration for PBXProject "chasm" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -274,6 +383,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		01C723A930609B85002F3C5F /* Build configuration list for PBXNativeTarget "chasmTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				01C723AA30609B85002F3C5F /* Debug configuration for PBXNativeTarget "chasmTest" */,
+				01C723AB30609B85002F3C5F /* Release configuration for PBXNativeTarget "chasmTest" */,
+			);
+			defaultConfigurationName = Release;
+		};
 		01FEF6AE3059E4950016BD00 /* Build configuration list for PBXProject "chasm" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -304,6 +421,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		01C723AD3060A2FD002F3C5F /* ArgumentParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01FEF6BF3059E9910016BD00 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
+			productName = ArgumentParser;
+		};
 		01FEF6C03059E9910016BD00 /* ArgumentParser */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 01FEF6BF3059E9910016BD00 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;

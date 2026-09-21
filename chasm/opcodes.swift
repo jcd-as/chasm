@@ -8,7 +8,7 @@
 import Foundation
 
 
-enum AddressingMode {
+enum AddressingMode: Decodable {
 	// one byte ops
     case implied		// no operands (e.g. INX)
     case accumulator	// A as operand (e.g. ASL A)
@@ -35,13 +35,13 @@ enum AddressingMode {
     }
 }
 
-struct Opcode {
+struct Opcode: Decodable {
     let hex: UInt8
     let mnemonic: String
     let mode: AddressingMode
 }
 
-struct OpcodeTable {
+struct OpcodeTable: Decodable {
     static let allOpcodes: [Opcode] = [
         // MARK: - 0x00 to 0x0F
         Opcode(hex: 0x00, mnemonic: "BRK", mode: .implied),

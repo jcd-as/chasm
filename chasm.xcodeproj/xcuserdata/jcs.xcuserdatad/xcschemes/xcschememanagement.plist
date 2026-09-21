@@ -9,9 +9,19 @@
 			<key>orderHint</key>
 			<integer>0</integer>
 		</dict>
+		<key>chasmTest.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
+		<key>01C723A430609B85002F3C5F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
 		<key>01FEF6B23059E4950016BD00</key>
 		<dict>
 			<key>primary</key>
