@@ -1,0 +1,1 @@
+.org $0100          ; skip the zero-page; this should fill the first 255 bytes with zeros

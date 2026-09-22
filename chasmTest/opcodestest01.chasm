@@ -1,0 +1,25 @@
+Lda $42
+ldA $43 ; comment
+lab1:    lda $44
+lab2:   lda $45     ; comment
+
+; comment
+
+tAx             ; implied
+ASL a           ; accumulator
+lda #$ff        ; immediate
+LDA $42, x      ; zero-page,x
+ldx $42, Y      ; zero-page,y
+
+jmp ($fffe)     ; absolute indirect
+;JMP lab2       ; absolute, handle labels, COMMENTED OUT
+JMP lab2        ; absolute, handle labels
+lda ($20, X)    ; indexed indirect
+lda ($20), Y    ; indirect indexed
+lda $4200       ; absolute
+lda $4200, x    ; absolute x
+lda $4200, y    ; absolute y
+BEQ lab1        ; relative, handle labels
+BCS $80         ; relative, handle addresses (unlikely, but still need to handle)
+lda not_yet_declared, x
+lda also_not_yet_declared, y
