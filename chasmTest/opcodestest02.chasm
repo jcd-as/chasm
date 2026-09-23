@@ -1,0 +1,511 @@
+;;;;;;;;;;;;;;
+; 0x00 to 0x0F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x00, mnemonic: "BRK", mode: .implied),
+brk
+
+;Opcode(hex: 0x01, mnemonic: "ORA", mode: .indexedIndirect),
+ora ($20, x)
+
+;Opcode(hex: 0x05, mnemonic: "ORA", mode: .zeroPage),
+ora $20
+
+;Opcode(hex: 0x06, mnemonic: "ASL", mode: .zeroPage),
+asl $20
+
+;Opcode(hex: 0x08, mnemonic: "PHP", mode: .implied),
+php
+
+;Opcode(hex: 0x09, mnemonic: "ORA", mode: .immediate),
+ora #$20
+
+;Opcode(hex: 0x0A, mnemonic: "ASL", mode: .accumulator),
+asl a
+
+;Opcode(hex: 0x0D, mnemonic: "ORA", mode: .absolute),
+ora $a000
+
+;Opcode(hex: 0x0E, mnemonic: "ASL", mode: .absolute),
+asl $a000
+
+;;;;;;;;;;;;;;
+; 0x10 to 0x1F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x10, mnemonic: "BPL", mode: .relative),
+label1: bpl label1
+
+;Opcode(hex: 0x11, mnemonic: "ORA", mode: .indirectIndexed),
+ora ($20), y
+
+;Opcode(hex: 0x15, mnemonic: "ORA", mode: .zeroPageX),
+ora $20,x
+
+;Opcode(hex: 0x16, mnemonic: "ASL", mode: .zeroPageX),
+asl $20,x
+
+;Opcode(hex: 0x18, mnemonic: "CLC", mode: .implied),
+clc
+
+;Opcode(hex: 0x1D, mnemonic: "ORA", mode: .absoluteX),
+ora $a000, x
+
+;Opcode(hex: 0x1E, mnemonic: "ASL", mode: .absoluteX),
+asl $a000, x
+
+;;;;;;;;;;;;;;
+;0x20 to 0x2F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x20, mnemonic: "JSR", mode: .absolute),
+jsr $a000
+
+;Opcode(hex: 0x21, mnemonic: "AND", mode: .indexedIndirect),
+and ($20, x)
+
+;Opcode(hex: 0x24, mnemonic: "BIT", mode: .zeroPage),
+bit $20
+
+;Opcode(hex: 0x25, mnemonic: "AND", mode: .zeroPage),
+and $20
+
+;Opcode(hex: 0x26, mnemonic: "ROL", mode: .zeroPage),
+rol $20
+
+;Opcode(hex: 0x28, mnemonic: "PLP", mode: .implied),
+plp
+
+;Opcode(hex: 0x29, mnemonic: "AND", mode: .immediate),
+and #$20
+
+;Opcode(hex: 0x2A, mnemonic: "ROL", mode: .accumulator),
+rol a
+
+;Opcode(hex: 0x2C, mnemonic: "BIT", mode: .absolute),
+bit $a000
+
+;Opcode(hex: 0x2D, mnemonic: "AND", mode: .absolute),
+and $a000
+
+;Opcode(hex: 0x2E, mnemonic: "ROL", mode: .absolute),
+rol $a000
+
+
+;;;;;;;;;;;;;;
+; 0x30 to 0x3F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x30, mnemonic: "BMI", mode: .relative),
+label2: bmi label2
+
+;Opcode(hex: 0x31, mnemonic: "AND", mode: .indirectIndexed),
+and ($20),y
+
+;Opcode(hex: 0x35, mnemonic: "AND", mode: .zeroPageX),
+and $20,x
+
+;Opcode(hex: 0x36, mnemonic: "ROL", mode: .zeroPageX),
+rol $20, x
+
+;Opcode(hex: 0x38, mnemonic: "SEC", mode: .implied),
+sec
+
+;Opcode(hex: 0x3D, mnemonic: "AND", mode: .absoluteX),
+and $a000,x
+
+;Opcode(hex: 0x3E, mnemonic: "ROL", mode: .absoluteX),
+rol $a000, x
+
+
+;;;;;;;;;;;;;;
+; 0x40 to 0x4F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x40, mnemonic: "RTI", mode: .implied),
+rti
+
+;Opcode(hex: 0x41, mnemonic: "EOR", mode: .indexedIndirect),
+eor ($20, x)
+
+;Opcode(hex: 0x45, mnemonic: "EOR", mode: .zeroPage),
+eor $20
+
+;Opcode(hex: 0x46, mnemonic: "LSR", mode: .zeroPage),
+lsr $20
+
+;Opcode(hex: 0x48, mnemonic: "PHA", mode: .implied),
+pha
+
+;Opcode(hex: 0x49, mnemonic: "EOR", mode: .immediate),
+eor #$20
+
+;Opcode(hex: 0x4A, mnemonic: "LSR", mode: .accumulator),
+lsr a
+
+;Opcode(hex: 0x4C, mnemonic: "JMP", mode: .absolute),
+jmp $a000
+
+;Opcode(hex: 0x4D, mnemonic: "EOR", mode: .absolute),
+eor $a000
+
+;Opcode(hex: 0x4E, mnemonic: "LSR", mode: .absolute),
+lsr $a000
+
+
+;;;;;;;;;;;;;;
+; 0x50 to 0x5F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x50, mnemonic: "BVC", mode: .relative),
+label3:     bvc  label3
+
+;Opcode(hex: 0x51, mnemonic: "EOR", mode: .indirectIndexed),
+eor ($20),y
+
+;Opcode(hex: 0x55, mnemonic: "EOR", mode: .zeroPageX),
+eor $20,x
+
+;Opcode(hex: 0x56, mnemonic: "LSR", mode: .zeroPageX),
+lsr $20, x
+
+;Opcode(hex: 0x58, mnemonic: "CLI", mode: .implied),
+cli
+
+;Opcode(hex: 0x5D, mnemonic: "EOR", mode: .absoluteX),
+eor $a000, x
+
+;Opcode(hex: 0x5E, mnemonic: "LSR", mode: .absoluteX),
+lsr $a000,x
+
+
+;;;;;;;;;;;;;;
+; 0x60 to 0x6F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x60, mnemonic: "RTS", mode: .implied),
+rts
+
+;Opcode(hex: 0x61, mnemonic: "ADC", mode: .indexedIndirect),
+adc ($20, x)
+
+;Opcode(hex: 0x65, mnemonic: "ADC", mode: .zeroPage),
+adc $20
+
+;Opcode(hex: 0x66, mnemonic: "ROR", mode: .zeroPage),
+ror $20
+
+;Opcode(hex: 0x68, mnemonic: "PLA", mode: .implied),
+pla
+
+;Opcode(hex: 0x69, mnemonic: "ADC", mode: .immediate),
+adc #$20
+
+;Opcode(hex: 0x6A, mnemonic: "ROR", mode: .accumulator),
+ror A
+
+;Opcode(hex: 0x6C, mnemonic: "JMP", mode: .indirect),
+jmp ($a000)
+
+;Opcode(hex: 0x6D, mnemonic: "ADC", mode: .absolute),
+adc $a000
+
+;Opcode(hex: 0x6E, mnemonic: "ROR", mode: .absolute),
+ror $a000
+
+
+;;;;;;;;;;;;;;
+; 0x70 to 0x7F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x70, mnemonic: "BVS", mode: .relative),
+label4: bvs label4
+
+;Opcode(hex: 0x71, mnemonic: "ADC", mode: .indirectIndexed),
+adc ($20), y
+
+;Opcode(hex: 0x75, mnemonic: "ADC", mode: .zeroPageX),
+adc $20, x
+
+;Opcode(hex: 0x76, mnemonic: "ROR", mode: .zeroPageX),
+ror $20, x
+
+;Opcode(hex: 0x78, mnemonic: "SEI", mode: .implied),
+sei
+
+;Opcode(hex: 0x7D, mnemonic: "ADC", mode: .absoluteX),
+adc $a000,x
+
+;Opcode(hex: 0x7E, mnemonic: "ROR", mode: .absoluteX),
+ror $a000, x
+
+
+;;;;;;;;;;;;;;
+; 0x80 to 0x8F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x81, mnemonic: "STA", mode: .indexedIndirect),
+sta ($20, x)
+
+;Opcode(hex: 0x84, mnemonic: "STY", mode: .zeroPage),
+sty $20
+
+;Opcode(hex: 0x85, mnemonic: "STA", mode: .zeroPage),
+sta $20
+
+;Opcode(hex: 0x86, mnemonic: "STX", mode: .zeroPage),
+stx $20
+
+;Opcode(hex: 0x88, mnemonic: "DEY", mode: .implied),
+dey
+
+;Opcode(hex: 0x8A, mnemonic: "TXA", mode: .implied),
+txa
+
+;Opcode(hex: 0x8C, mnemonic: "STY", mode: .absolute),
+sty $a000
+
+;Opcode(hex: 0x8D, mnemonic: "STA", mode: .absolute),
+sta $a000
+
+;Opcode(hex: 0x8E, mnemonic: "STX", mode: .absolute),
+stx $a000
+
+
+;;;;;;;;;;;;;;
+; 0x90 to 0x9F
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0x90, mnemonic: "BCC", mode: .relative),
+label5:     bcc     label5
+
+;Opcode(hex: 0x91, mnemonic: "STA", mode: .indirectIndexed),
+sta ($20), y
+
+;Opcode(hex: 0x94, mnemonic: "STY", mode: .zeroPageX),
+sty $20, x
+
+;Opcode(hex: 0x95, mnemonic: "STA", mode: .zeroPageX),
+sta $20,x
+
+;Opcode(hex: 0x96, mnemonic: "STX", mode: .zeroPageY),
+stx $20, y
+
+;Opcode(hex: 0x98, mnemonic: "TYA", mode: .implied),
+tya
+
+;Opcode(hex: 0x99, mnemonic: "STA", mode: .absoluteY),
+sta $a000,y
+
+;Opcode(hex: 0x9A, mnemonic: "TXS", mode: .implied),
+txs
+
+;Opcode(hex: 0x9D, mnemonic: "STA", mode: .absoluteX),
+sta $a000, x
+
+
+;;;;;;;;;;;;;;
+; 0xA0 to 0xAF
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0xA0, mnemonic: "LDY", mode: .immediate),
+ldy #$20
+
+;Opcode(hex: 0xA1, mnemonic: "LDA", mode: .indexedIndirect),
+lda ($20, x)
+
+;Opcode(hex: 0xA2, mnemonic: "LDX", mode: .immediate),
+ldx #$20
+
+;Opcode(hex: 0xA4, mnemonic: "LDY", mode: .zeroPage),
+ldy $20
+
+;Opcode(hex: 0xA5, mnemonic: "LDA", mode: .zeroPage),
+lda $20
+
+;Opcode(hex: 0xA6, mnemonic: "LDX", mode: .zeroPage),
+ldx $20
+
+;Opcode(hex: 0xA8, mnemonic: "TAY", mode: .implied),
+tay
+
+;Opcode(hex: 0xA9, mnemonic: "LDA", mode: .immediate),
+lda #$20
+
+;Opcode(hex: 0xAA, mnemonic: "TAX", mode: .implied),
+tax
+
+;Opcode(hex: 0xAC, mnemonic: "LDY", mode: .absolute),
+ldy $a000
+
+;Opcode(hex: 0xAD, mnemonic: "LDA", mode: .absolute),
+lda $a000
+
+;Opcode(hex: 0xAE, mnemonic: "LDX", mode: .absolute),
+ldx $a000
+
+
+;;;;;;;;;;;;;;
+; 0xB0 to 0xBF
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0xB0, mnemonic: "BCS", mode: .relative),
+label6:bcs label6
+
+;Opcode(hex: 0xB1, mnemonic: "LDA", mode: .indirectIndexed),
+lda ($20), y
+
+;Opcode(hex: 0xB4, mnemonic: "LDY", mode: .zeroPageX),
+ldy $20,x
+
+;Opcode(hex: 0xB5, mnemonic: "LDA", mode: .zeroPageX),
+lda $20,x
+
+;Opcode(hex: 0xB6, mnemonic: "LDX", mode: .zeroPageY),
+ldx $20, y
+
+;Opcode(hex: 0xB8, mnemonic: "CLV", mode: .implied),
+clv
+
+;Opcode(hex: 0xB9, mnemonic: "LDA", mode: .absoluteY),
+lda $a000, y
+
+;Opcode(hex: 0xBA, mnemonic: "TSX", mode: .implied),
+tsx
+
+;Opcode(hex: 0xBC, mnemonic: "LDY", mode: .absoluteX),
+ldy $a000, x
+
+;Opcode(hex: 0xBD, mnemonic: "LDA", mode: .absoluteX),
+lda $a000,x
+
+;Opcode(hex: 0xBE, mnemonic: "LDX", mode: .absoluteY),
+ldx $a000,y
+
+
+;;;;;;;;;;;;;;
+; 0xC0 to 0xCF
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0xC0, mnemonic: "CPY", mode: .immediate),
+cpy #$20
+
+;Opcode(hex: 0xC1, mnemonic: "CMP", mode: .indexedIndirect),
+cmp ($20, x)
+
+;Opcode(hex: 0xC4, mnemonic: "CPY", mode: .zeroPage),
+cpy $20
+
+;Opcode(hex: 0xC5, mnemonic: "CMP", mode: .zeroPage),
+cmp $20
+
+;Opcode(hex: 0xC6, mnemonic: "DEC", mode: .zeroPage),
+dec $20
+
+;Opcode(hex: 0xC8, mnemonic: "INY", mode: .implied),
+iny
+
+;Opcode(hex: 0xC9, mnemonic: "CMP", mode: .immediate),
+cmp #$20
+
+;Opcode(hex: 0xCA, mnemonic: "DEX", mode: .implied),
+dex
+
+;Opcode(hex: 0xCC, mnemonic: "CPY", mode: .absolute),
+cpy $a000
+
+;Opcode(hex: 0xCD, mnemonic: "CMP", mode: .absolute),
+cmp $a000
+
+;Opcode(hex: 0xCE, mnemonic: "DEC", mode: .absolute),
+dec $a000
+
+
+;;;;;;;;;;;;;;
+; 0xD0 to 0xDF
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0xD0, mnemonic: "BNE", mode: .relative),
+label7:     bne label7
+
+;Opcode(hex: 0xD1, mnemonic: "CMP", mode: .indirectIndexed),
+cmp ($20), y
+
+;Opcode(hex: 0xD5, mnemonic: "CMP", mode: .zeroPageX),
+cmp $20, x
+
+;Opcode(hex: 0xD6, mnemonic: "DEC", mode: .zeroPageX),
+dec $20, x
+
+;Opcode(hex: 0xD8, mnemonic: "CLD", mode: .implied),
+cld
+
+;Opcode(hex: 0xDD, mnemonic: "CMP", mode: .absoluteX),
+cmp $a000, x
+
+;Opcode(hex: 0xDE, mnemonic: "DEC", mode: .absoluteX),
+dec $a000,x
+
+
+;;;;;;;;;;;;;;
+; 0xE0 to 0xEF
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0xE0, mnemonic: "CPX", mode: .immediate),
+cpx #$20
+
+;Opcode(hex: 0xE1, mnemonic: "SBC", mode: .indexedIndirect),
+sbc ($20, x)
+
+;Opcode(hex: 0xE4, mnemonic: "CPX", mode: .zeroPage),
+cpx $20
+
+;Opcode(hex: 0xE5, mnemonic: "SBC", mode: .zeroPage),
+sbc $20
+
+;Opcode(hex: 0xE6, mnemonic: "INC", mode: .zeroPage),
+inc $20
+
+;Opcode(hex: 0xE8, mnemonic: "INX", mode: .implied),
+inx
+
+;Opcode(hex: 0xE9, mnemonic: "SBC", mode: .immediate),
+sbc #$20
+
+;Opcode(hex: 0xEA, mnemonic: "NOP", mode: .implied),
+nop
+
+;Opcode(hex: 0xEC, mnemonic: "CPX", mode: .absolute),
+cpx $a000
+
+;Opcode(hex: 0xED, mnemonic: "SBC", mode: .absolute),
+sbc $a000
+
+;Opcode(hex: 0xEE, mnemonic: "INC", mode: .absolute),
+inc $a000
+
+
+;;;;;;;;;;;;;;
+; 0xF0 to 0xFF
+;;;;;;;;;;;;;;
+
+;Opcode(hex: 0xF0, mnemonic: "BEQ", mode: .relative),
+label8:beq label8
+
+;Opcode(hex: 0xF1, mnemonic: "SBC", mode: .indirectIndexed),
+sbc ($20), y
+
+;Opcode(hex: 0xF5, mnemonic: "SBC", mode: .zeroPageX),
+sbc $20, x
+
+;Opcode(hex: 0xF6, mnemonic: "INC", mode: .zeroPageX),
+inc $20, x
+
+;Opcode(hex: 0xF8, mnemonic: "SED", mode: .implied),
+sed
+
+;Opcode(hex: 0xFD, mnemonic: "SBC", mode: .absoluteX),
+sbc $a000, x
+
+;Opcode(hex: 0xFE, mnemonic: "INC", mode: .absoluteX)
+inc $a000,x
