@@ -403,6 +403,11 @@ public struct Chasm: ParsableCommand {
 			}
 
 			if let n = parseNum(String(contentparts[1])) {
+				// check for dups
+				if let _ = globals.symbolTable[String(contentparts[0])] {
+					err(".DEF symbol redefinition: '\(contentparts[0])'", line: number)
+					return nil
+				}
 				// enter into symbol table
 				globals.symbolTable[String(contentparts[0])] = n
 				// no need to create a DirectiveLine...
@@ -437,6 +442,11 @@ public struct Chasm: ParsableCommand {
 			// ensure col 0 is non-whitespace
 			if label[label.startIndex].isWhitespace {
 				err("labels must start in the first column", line: number)
+				abort()
+			}
+			// check for dups
+			if let _ = globals.symbolTable[label] {
+				err("symbol redefinition: '\(label)'", line: number)
 				abort()
 			}
 			// add label to symbol table with current pc
