@@ -25,3 +25,4 @@ lda not_yet_declared, x
 lda also_not_yet_declared, y
 not_yet_declared:
 ALSO_NOT_YET_DECLARED:
+jmp (lab1)

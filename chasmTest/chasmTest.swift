@@ -50,8 +50,8 @@ struct chasmTest {
         try chasmcmd.run()
 
         // number of non-blank (or comment-only) lines:
-        // TODO: re-enable once test is stable
-        #expect(chasmcmd.globals.preprocInput.count == 22)
+        // TODO: update as lines are added to test file...
+        #expect(chasmcmd.globals.preprocInput.count == 23)
 
         // line 1 (lea $42)
         switch chasmcmd.globals.preprocInput[0] {
@@ -246,7 +246,6 @@ struct chasmTest {
             #expect(code.arg2 == "Y")
         }
 
-        // TODO: relative (branch) addressing
         // line 22 (BEQ lab1       ; TBD - relative, handle labels)
         switch chasmcmd.globals.preprocInput[16] {
         case .directive:
@@ -294,6 +293,45 @@ struct chasmTest {
             #expect(code.arg1 == "ALSO_NOT_YET_DECLARED")
             #expect(code.arg2 == "Y")
         }
+        
+        // line 26 - not_yet_declared:
+        switch chasmcmd.globals.preprocInput[20] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.linenum == 25)
+            #expect(code.offset == 45)
+            #expect(code.label == "NOT_YET_DECLARED")
+            #expect(code.op == nil)
+            #expect(code.arg1 == "")
+            #expect(code.arg2 == "")
+        }
+        
+        // line 27 - not_yet_declared:
+        switch chasmcmd.globals.preprocInput[21] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.linenum == 26)
+            #expect(code.offset == 45)
+            #expect(code.label == "ALSO_NOT_YET_DECLARED")
+            #expect(code.op == nil)
+            #expect(code.arg1 == "")
+            #expect(code.arg2 == "")
+        }
+        
+        // line 29 - jmp (lab1)
+        switch chasmcmd.globals.preprocInput[22] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.op!.mnemonic == "JMP")
+            #expect(code.op!.mode == .indirect)
+            #expect(code.op!.hex == 0x6C)
+            #expect(code.arg1 == "(LAB1)")
+            #expect(code.arg2 == "")
+        }
+
     }
 
     @Test func passOneTest01() async throws {
@@ -310,7 +348,7 @@ struct chasmTest {
         case .directive(let d):
             #expect(d.linenum == 0)
             #expect(d.name == ".ORG")
-            #expect(d.content == "$0100")
+            #expect(d.content == "$0000")
         case .code:
             #expect(Bool(false))
         }
