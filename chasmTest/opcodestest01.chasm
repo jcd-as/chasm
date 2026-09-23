@@ -23,3 +23,5 @@ BEQ lab1        ; relative, handle labels
 BCS $80         ; relative, handle addresses (unlikely, but still need to handle)
 lda not_yet_declared, x
 lda also_not_yet_declared, y
+not_yet_declared:
+ALSO_NOT_YET_DECLARED:

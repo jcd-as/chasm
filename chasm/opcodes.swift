@@ -17,11 +17,11 @@ enum AddressingMode: Decodable {
     case zeroPage		// one byte address operand (e.g. LDA $42)
     case zeroPageX		// adds X to zero-page address (e.g. LDA $42,X)
     case zeroPageY		// adds Y to zero-page address (e.g. LDX $42,Y)
-    case indirect		// absolute indirect, JMP only (e.g. JMP ($fffe))
     case indexedIndirect // index ZP addres with X, fetch address from there (e.g. LDA ($20,X))
     case indirectIndexed // fetch 16-bit address from ZP, then add & to it (e.g. LDA($20), Y)
     case relative		// branch opcodes only (e.g. BEQ .label, where label is -128 to +127 one byte signed offset)
     // three byte ops
+    case indirect		// absolute indirect, JMP only (e.g. JMP ($fffe))
     case absolute		// full 16-bit address operand (e.g. LDA $4200)
     case absoluteX		// adds X to 16-bit address op (e.g. LDA $4200,X)
     case absoluteY		// adds Y to 16-bit address op (e.g. LDA $4200,Y)

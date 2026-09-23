@@ -1,1 +1,10 @@
-.org $0100          ; skip the zero-page; this should fill the first 255 bytes with zeros
+.org $0000          ;
+.byte $00, $100      ; skip the zero-page; this should fill the first 256 bytes with zeros
+
+        cli
+loop:   lda #$ea
+        ldx #255
+        sta $00, x
+        cpx #0
+        BnE loop
+        BRK
