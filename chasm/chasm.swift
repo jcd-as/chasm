@@ -5,7 +5,11 @@
 //  Created by Josh Shepard on 9/15/26.
 //
 // TODO:
-// * directives: .def, .data, .string, .byte, .word, .include, .incbin...
+// * need to implement <[symbol] and >[symbol] to extract Low and High bytes
+// * need to support basic math on symbols (esp +[offset])
+// * should differentiate labels and .defs in symbol table so that we can...
+// * add -s option to generate symbols file (format: '<symbol>    <hex address>' per line)
+// * directives: .data, .string, .byte, .word, .include, .incbin...
 // * pre-processing (defs/equs, macros)
 // * sub-routines (local labels/symbols)
 // * error handling - better error messages from closer to failure site
@@ -59,6 +63,14 @@ public enum Line: Decodable {
 	case directive(DirectiveLine)
 }
 
+public func highByte(_ word: UInt16) -> UInt8 {
+	return UInt8((word >> 8) & 0xFF)
+}
+
+public func lowByte(_ word: UInt16) -> UInt8 {
+	return UInt8(word & 0xFF)
+}
+
 // global symbols, incl the symbol table and the "tokenized" and preprocessed input
 // an instance of will be passed around as inout parameter
 public struct Globals: Decodable {
@@ -80,6 +92,9 @@ public struct Chasm: ParsableCommand {
 
 	@Option(name: [.short, .long], help: "output filename")
 	var output: String?
+
+	@Flag(name: [.short, .long], help: "produce c64 header?")
+	var header: Int
 
 	// MARK: main entry point
 
@@ -116,8 +131,16 @@ public struct Chasm: ParsableCommand {
 			let url = URL(fileURLWithPath: input)
 			outURL = url.deletingPathExtension().appendingPathExtension("out")
 		}
-		let data = buf.withUnsafeBytes { rawbuf in
+		var data = buf.withUnsafeBytes { rawbuf in
 			Data(bytes: rawbuf.baseAddress!, count: rawbuf.count)
+		}
+		// if -h, add a header with the initial org
+		if header != 0 {
+			let org = initialOrg
+			let high = highByte(org)
+			let low = lowByte(org)
+			data.insert(high, at: 0)
+			data.insert(low, at: 0)
 		}
 		do {
 			try data.write(to: outURL, options: [.atomic])
@@ -125,6 +148,25 @@ public struct Chasm: ParsableCommand {
 		} catch {
 			print("error writing file: \(error)")
 		}
+	}
+
+	// (initial org is assumed to be zero *unless* the first non-.def line is an .org line)
+	var initialOrg: UInt16 {
+		for line in globals.preprocInput {
+			switch line {
+			case .directive(let d):
+				if d.name == ".ORG" {
+					return d.newPC!
+				} else if d.name == ".DEF" {
+					continue
+				} else {
+					return 0
+				}
+			case .code:
+				return 0
+			}
+		}
+		return 0
 	}
 
 	// MARK: passes
@@ -160,8 +202,9 @@ public struct Chasm: ParsableCommand {
 	public mutating func generateForDirective(_ line: DirectiveLine, from: inout UInt16) {
 		// TODO: impl all directives
 		// .org, .def, .data, .string, .byte, .word, .include, .incbin...
-
 		switch line.name {
+		case ".DEF":
+			break
 		case ".ORG":
 			if let newpc = line.newPC {
 				let len = Int(newpc) - Int(from)
@@ -263,15 +306,15 @@ public struct Chasm: ParsableCommand {
 				let w = wordForAddr(
 					String(line.arg1.trimmingCharacters(in: CharacterSet(charactersIn: "()"))))
 				// write output in little-endian byte order
-				let high = UInt8((w >> 8) & 0xFF)
-				let low = UInt8(w & 0xFF)
+				let high = highByte(w)
+				let low = lowByte(w)
 				buf.append(low)
 				buf.append(high)
 			case .absolute, .absoluteX, .absoluteY:  // adds Y to 16-bit address op (e.g. LDA $4200,Y)
 				let w = wordForAddr(line.arg1)
 				// write output in little-endian byte order
-				let high = UInt8((w >> 8) & 0xFF)
-				let low = UInt8(w & 0xFF)
+				let high = highByte(w)
+				let low = lowByte()(w)
 				buf.append(low)
 				buf.append(high)
 			}
@@ -288,6 +331,34 @@ public struct Chasm: ParsableCommand {
 		}
 		fatal("invalid immediate: '\(immed)'")
 	}
+	
+	// get a byte for a symbol, respecting </> operators and 
+	// checking to make sure a symbol is < 256
+	func byteForSymbol(_ sym: String) -> UInt8? {
+		var getLow: Bool = false, getHigh: Bool = false
+		var s: String
+		if sym.first == "<" {
+			getLow = true
+			s = String(sym.trimmingPrefix("<"))
+		} else if sym.first == ">" {
+			getHigh = true
+			s = String(sym.trimmingPrefix("<"))
+		} else {
+			s = sym
+		}
+			
+		let optn = globals.symbolTable[s]
+		if let n = optn {
+			if getLow {
+				return lowByte(n)
+			} else if getHigh {
+			} else {
+				return highByte(n)
+			}
+		} else {
+			return nil
+		}
+	}
 
 	// convert a string representing an 8-bit address arg to its byte equivalent
 	func byteForAddr(_ addr: String) -> UInt8 {
@@ -297,6 +368,7 @@ public struct Chasm: ParsableCommand {
 			fatal("expected 8-bit address: '\(addr)'")
 		} else {
 			// symbol?
+			// TODO: call byteForSymbol() here to handle </> low/high byte
 			let optn = globals.symbolTable[addr]
 			if let n = optn {
 				if n < 256 { return UInt8(n) }
@@ -395,25 +467,26 @@ public struct Chasm: ParsableCommand {
 			let contentparts = content.split(maxSplits: 1) { $0.isWhitespace }
 			if contentparts.count != 2 {
 				err("invalid .DEF: '\(content)'", line: number)
-				return nil
+				abort()
 			}
-			if !validLabel(String(contentparts[0])) {
-				err("invalid .DEF symbol name: '\(contentparts[0])'", line: number)
-				return nil
+			let lhs = String(contentparts[0].trimmingCharacters(in: .whitespaces))
+			let rhs = String(contentparts[1].trimmingCharacters(in: .whitespaces))
+			if !validLabel(lhs) {
+				err("invalid .DEF symbol name: '\(lhs)'", line: number)
+				abort()
 			}
 
-			if let n = parseNum(String(contentparts[1])) {
+			if let n = parseNum(rhs) {
 				// check for dups
-				if let _ = globals.symbolTable[String(contentparts[0])] {
-					err(".DEF symbol redefinition: '\(contentparts[0])'", line: number)
-					return nil
+				if globals.symbolTable[lhs] != nil {
+					err(".DEF symbol redefinition: '\(lhs)'", line: number)
+					abort()
 				}
 				// enter into symbol table
-				globals.symbolTable[String(contentparts[0])] = n
-				// no need to create a DirectiveLine...
-				return nil
+				globals.symbolTable[lhs] = n
+				return DirectiveLine(linenum: number, offset: pc, name: name, content: "", newPC: nil)
 			} else {
-				err("invalid .DEF value: '\(contentparts[1])'", line: number)
+				err("invalid .DEF value: '\(rhs)'", line: number)
 				return nil
 			}
 		default:
@@ -445,7 +518,7 @@ public struct Chasm: ParsableCommand {
 				abort()
 			}
 			// check for dups
-			if let _ = globals.symbolTable[label] {
+			if globals.symbolTable[label] != nil {
 				err("symbol redefinition: '\(label)'", line: number)
 				abort()
 			}
@@ -552,6 +625,23 @@ public struct Chasm: ParsableCommand {
 		}
 		return true
 	}
+	
+	// is this symbol valid in a "RHS" context. i.e. when being referenced, not defined
+	func validSymbolRHS(_ label: String) -> Bool {
+		if label.count == 0 {
+			return false
+		}
+		let c = label[label.startIndex]
+		if !c.isLetter && c != "_" && c != "<" && c != ">" {
+			return false
+		}
+		for c in label {
+			if !c.isLetter && !c.isNumber && c != "_" && c != "<" && c != ">" {
+				return false
+			}
+		}
+		return true
+	}
 
 	func parseAddressingMode(opcode: String, arg1: String, arg2: String) -> AddressingMode? {
 		// addressing mode matching:
@@ -578,8 +668,8 @@ public struct Chasm: ParsableCommand {
 			// branch instruction = relative addressing
 			switch opcode {
 			case "BCC", "BCS", "BEQ", "BNE", "BMI", "BPL", "BVC", "BVS":
-				// validate label/number
-				if !validLabel(arg1) && parseNum(arg1) == nil {
+				// validate symbol/number
+				if !validSymbolRHS(arg1) && parseNum(arg1) == nil {
 					return nil
 				}
 				return .relative
@@ -622,6 +712,7 @@ public struct Chasm: ParsableCommand {
 			if arg2 == "X" {
 				// symbol or number?
 				if let sym = globals.symbolTable[arg1.uppercased()] {
+					// TODO: symbols with </> prefix (low/high byte) should be zero-page
 					if sym < 256 { return .zeroPageX }
 					return .absoluteX
 				} else {
@@ -664,6 +755,7 @@ public struct Chasm: ParsableCommand {
 				}
 				// symbol or number?
 				if let sym = globals.symbolTable[arg1.uppercased()] {
+					// TODO: symbols with </> prefix (low/high byte) should be zero-page
 					if sym < 256 { return .zeroPageY }
 					return .absoluteY
 				} else {
