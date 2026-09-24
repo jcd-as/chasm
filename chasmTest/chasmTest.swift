@@ -31,8 +31,8 @@ struct chasmTest {
         var chasmcmd = try #require(cmd as? Chasm)
         try chasmcmd.run()
 
-        #expect(chasmcmd.globals.preprocInput.count == 1)
-        switch chasmcmd.globals.preprocInput[0] {
+        #expect(chasmcmd.preprocInput.count == 1)
+        switch chasmcmd.preprocInput[0] {
         case .directive(let directive):
             #expect(directive.name == ".ORG")
             #expect(directive.content == "$1000")
@@ -51,10 +51,10 @@ struct chasmTest {
 
         // number of non-blank (or comment-only) lines:
         // TODO: update as lines are added to test file...
-        #expect(chasmcmd.globals.preprocInput.count == 23)
+        #expect(chasmcmd.preprocInput.count == 29)
 
         // line 1 (lea $42)
-        switch chasmcmd.globals.preprocInput[0] {
+        switch chasmcmd.preprocInput[0] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -65,7 +65,7 @@ struct chasmTest {
             #expect(code.arg2 == "")
         }
         // line 2 (lea $43 ; comment)
-        switch chasmcmd.globals.preprocInput[1] {
+        switch chasmcmd.preprocInput[1] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -76,7 +76,7 @@ struct chasmTest {
             #expect(code.arg2 == "")
         }
         // line 3 (lab1:    lea $44)
-        switch chasmcmd.globals.preprocInput[2] {
+        switch chasmcmd.preprocInput[2] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -88,7 +88,7 @@ struct chasmTest {
             #expect(code.label == "LAB1")
         }
         // line 4 (lab1:    lea $45     ; comment)
-        switch chasmcmd.globals.preprocInput[3] {
+        switch chasmcmd.preprocInput[3] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -105,7 +105,7 @@ struct chasmTest {
         // line 7 blank
 
         // line 8 (tax             ; implied)
-        switch chasmcmd.globals.preprocInput[4] {
+        switch chasmcmd.preprocInput[4] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -116,7 +116,7 @@ struct chasmTest {
             #expect(code.arg2 == "")
         }
         // line 9 (asl a           ; accumulator)
-        switch chasmcmd.globals.preprocInput[5] {
+        switch chasmcmd.preprocInput[5] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -127,7 +127,7 @@ struct chasmTest {
             #expect(code.arg2 == "")
         }
         // line 10 (lda #$ff        ; immediate)
-        switch chasmcmd.globals.preprocInput[6] {
+        switch chasmcmd.preprocInput[6] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -138,7 +138,7 @@ struct chasmTest {
             #expect(code.arg2 == "")
         }
         //line 11 (LDA $42, x      ; zero-page,x)
-        switch chasmcmd.globals.preprocInput[7] {
+        switch chasmcmd.preprocInput[7] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -149,7 +149,7 @@ struct chasmTest {
             #expect(code.arg2 == "X")
         }
         // line 12 (ldx $42, Y      ; zero-page,y)
-        switch chasmcmd.globals.preprocInput[8] {
+        switch chasmcmd.preprocInput[8] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -162,7 +162,7 @@ struct chasmTest {
         // line 13 - blank
 
         // line 14 (jmp ($fffe)      ; (absolute) indirect)
-        switch chasmcmd.globals.preprocInput[9] {
+        switch chasmcmd.preprocInput[9] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -176,7 +176,7 @@ struct chasmTest {
         // line 15 (;JMP lab2       ; absolute, handle labels COMMENTED OUT)
 
         // line 16 (JMP lab2       ; absolute, handle labels)
-        switch chasmcmd.globals.preprocInput[10] {
+        switch chasmcmd.preprocInput[10] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -188,7 +188,7 @@ struct chasmTest {
         }
 
         // line 17 (lda ($20, X)    ; indexed indirect)
-        switch chasmcmd.globals.preprocInput[11] {
+        switch chasmcmd.preprocInput[11] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -200,7 +200,7 @@ struct chasmTest {
         }
 
         // line 18 (lda ($20), Y    ; indirect indexed)
-        switch chasmcmd.globals.preprocInput[12] {
+        switch chasmcmd.preprocInput[12] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -212,7 +212,7 @@ struct chasmTest {
         }
 
         // line 19 (lda $4200       ; absolute)
-        switch chasmcmd.globals.preprocInput[13] {
+        switch chasmcmd.preprocInput[13] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -224,7 +224,7 @@ struct chasmTest {
         }
 
         // line 20 (lda $4200, x    ; absolute x)
-        switch chasmcmd.globals.preprocInput[14] {
+        switch chasmcmd.preprocInput[14] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -235,7 +235,7 @@ struct chasmTest {
             #expect(code.arg2 == "X")
         }
         // line 21 (lda $4200, y    ; absolute y)
-        switch chasmcmd.globals.preprocInput[15] {
+        switch chasmcmd.preprocInput[15] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -247,7 +247,7 @@ struct chasmTest {
         }
 
         // line 22 (BEQ lab1       ; TBD - relative, handle labels)
-        switch chasmcmd.globals.preprocInput[16] {
+        switch chasmcmd.preprocInput[16] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -259,7 +259,7 @@ struct chasmTest {
         }
 
         // line 23 (BCS $80       ; relative)
-        switch chasmcmd.globals.preprocInput[17] {
+        switch chasmcmd.preprocInput[17] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -271,7 +271,7 @@ struct chasmTest {
         }
 
         // line 24 (lda not_yet_declared, x)
-        switch chasmcmd.globals.preprocInput[18] {
+        switch chasmcmd.preprocInput[18] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -283,7 +283,7 @@ struct chasmTest {
         }
 
         // line 25 (lda also_not_yet_declared, y)
-        switch chasmcmd.globals.preprocInput[19] {
+        switch chasmcmd.preprocInput[19] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -295,7 +295,7 @@ struct chasmTest {
         }
         
         // line 26 - not_yet_declared:
-        switch chasmcmd.globals.preprocInput[20] {
+        switch chasmcmd.preprocInput[20] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -308,7 +308,7 @@ struct chasmTest {
         }
         
         // line 27 - not_yet_declared:
-        switch chasmcmd.globals.preprocInput[21] {
+        switch chasmcmd.preprocInput[21] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -321,7 +321,7 @@ struct chasmTest {
         }
         
         // line 29 - jmp (lab1)
-        switch chasmcmd.globals.preprocInput[22] {
+        switch chasmcmd.preprocInput[22] {
         case .directive:
             #expect(Bool(false))
         case .code(let code):
@@ -332,6 +332,77 @@ struct chasmTest {
             #expect(code.arg2 == "")
         }
 
+        // line 30 - lda <ALSO_NOT_YET_DECLARED      ; low-byte of label
+        switch chasmcmd.preprocInput[23] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.op!.mnemonic == "LDA")
+            #expect(code.op!.mode == .zeroPage)
+            #expect(code.op!.hex == 0xA5)
+            #expect(code.arg1 == "<ALSO_NOT_YET_DECLARED")
+            #expect(code.arg2 == "")
+        }
+
+        // line 31 - lda >ALSO_NOT_YET_DECLARED      ; high-byte of label
+        switch chasmcmd.preprocInput[24] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.op!.mnemonic == "LDA")
+            #expect(code.op!.mode == .zeroPage)
+            #expect(code.op!.hex == 0xA5)
+            #expect(code.arg1 == ">ALSO_NOT_YET_DECLARED")
+            #expect(code.arg2 == "")
+        }
+
+        // line 32 - lda #<ALSO_NOT_YET_DECLARED      ; low-byte of label
+        switch chasmcmd.preprocInput[25] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.op!.mnemonic == "LDA")
+            #expect(code.op!.mode == .immediate)
+            #expect(code.op!.hex == 0xA9)
+            #expect(code.arg1 == "#<ALSO_NOT_YET_DECLARED")
+            #expect(code.arg2 == "")
+        }
+
+        // line 33 - lda #>ALSO_NOT_YET_DECLARED      ; high-byte of label
+        switch chasmcmd.preprocInput[26] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.op!.mnemonic == "LDA")
+            #expect(code.op!.mode == .immediate)
+            #expect(code.op!.hex == 0xA9)
+            #expect(code.arg1 == "#>ALSO_NOT_YET_DECLARED")
+            #expect(code.arg2 == "")
+        }
+
+        // line 34 - ldx <not_yet_declared, y
+        switch chasmcmd.preprocInput[27] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.op!.mnemonic == "LDX")
+            #expect(code.op!.mode == .zeroPageY)
+            #expect(code.op!.hex == 0xB6)
+            #expect(code.arg1 == "<NOT_YET_DECLARED")
+            #expect(code.arg2 == "Y")
+        }
+
+        // line 35 - ldx >not_yet_declared, y
+        switch chasmcmd.preprocInput[28] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let code):
+            #expect(code.op!.mnemonic == "LDX")
+            #expect(code.op!.mode == .zeroPageY)
+            #expect(code.op!.hex == 0xB6)
+            #expect(code.arg1 == ">NOT_YET_DECLARED")
+            #expect(code.arg2 == "Y")
+        }
     }
 
     @Test func passOneTest01() async throws {
@@ -341,10 +412,10 @@ struct chasmTest {
         var chasmcmd = try #require(cmd as? Chasm)
         try chasmcmd.run()
 
-        #expect(chasmcmd.globals.preprocInput.count == 9)
+        #expect(chasmcmd.preprocInput.count == 9)
         
         // line 1 - ORG
-        switch chasmcmd.globals.preprocInput[0] {
+        switch chasmcmd.preprocInput[0] {
         case .directive(let d):
             #expect(d.linenum == 0)
             #expect(d.name == ".ORG")
@@ -353,7 +424,7 @@ struct chasmTest {
             #expect(Bool(false))
         }
         // line 2 - BYTE
-        switch chasmcmd.globals.preprocInput[1] {
+        switch chasmcmd.preprocInput[1] {
         case .directive(let d):
             #expect(d.linenum == 1)
             #expect(d.name == ".BYTE")
@@ -362,7 +433,7 @@ struct chasmTest {
             #expect(Bool(false))
         }
         // line 3 - cli
-        switch chasmcmd.globals.preprocInput[2] {
+        switch chasmcmd.preprocInput[2] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -375,7 +446,7 @@ struct chasmTest {
             #expect(c.arg2 == "")
         }
         // line 4 - loop:   lda #$ea
-        switch chasmcmd.globals.preprocInput[3] {
+        switch chasmcmd.preprocInput[3] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -388,7 +459,7 @@ struct chasmTest {
             #expect(c.arg2 == "")
         }
         // line 5 - ldx #255
-        switch chasmcmd.globals.preprocInput[4] {
+        switch chasmcmd.preprocInput[4] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -401,7 +472,7 @@ struct chasmTest {
             #expect(c.arg2 == "")
         }
         // line 6 - sta $00, x
-        switch chasmcmd.globals.preprocInput[5] {
+        switch chasmcmd.preprocInput[5] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -414,7 +485,7 @@ struct chasmTest {
             #expect(c.arg2 == "X")
         }
         // line 7 - cpx #0
-        switch chasmcmd.globals.preprocInput[6] {
+        switch chasmcmd.preprocInput[6] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -427,7 +498,7 @@ struct chasmTest {
             #expect(c.arg2 == "")
         }
         // line 8 - BnE loop
-        switch chasmcmd.globals.preprocInput[7] {
+        switch chasmcmd.preprocInput[7] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -440,7 +511,7 @@ struct chasmTest {
             #expect(c.arg2 == "")
         }
         // line 9 - BRK
-        switch chasmcmd.globals.preprocInput[8] {
+        switch chasmcmd.preprocInput[8] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -509,7 +580,7 @@ struct chasmTest {
         //; 0x00 to 0x0F
         //;Opcode(hex: 0x00, mnemonic: "BRK", mode: .implied),
         //brk
-        switch chasmcmd.globals.preprocInput[0] {
+        switch chasmcmd.preprocInput[0] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -523,7 +594,7 @@ struct chasmTest {
         
         //;Opcode(hex: 0x01, mnemonic: "ORA", mode: .indexedIndirect),
         //ora ($20, x)
-        switch chasmcmd.globals.preprocInput[1] {
+        switch chasmcmd.preprocInput[1] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -537,7 +608,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x05, mnemonic: "ORA", mode: .zeroPage),
         //ora $20
-        switch chasmcmd.globals.preprocInput[2] {
+        switch chasmcmd.preprocInput[2] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -551,7 +622,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x06, mnemonic: "ASL", mode: .zeroPage),
         //asl $20
-        switch chasmcmd.globals.preprocInput[3] {
+        switch chasmcmd.preprocInput[3] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -565,7 +636,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x08, mnemonic: "PHP", mode: .implied),
         //php
-        switch chasmcmd.globals.preprocInput[4] {
+        switch chasmcmd.preprocInput[4] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -579,7 +650,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x09, mnemonic: "ORA", mode: .immediate),
         //ora #$20
-         switch chasmcmd.globals.preprocInput[5] {
+         switch chasmcmd.preprocInput[5] {
          case .directive:
              #expect(Bool(false))
          case .code(let c):
@@ -593,7 +664,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x0A, mnemonic: "ASL", mode: .accumulator),
         //asl a
-        switch chasmcmd.globals.preprocInput[6] {
+        switch chasmcmd.preprocInput[6] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -607,7 +678,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x0D, mnemonic: "ORA", mode: .absolute),
         //ora $a000
-        switch chasmcmd.globals.preprocInput[7] {
+        switch chasmcmd.preprocInput[7] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -621,7 +692,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x0E, mnemonic: "ASL", mode: .absolute),
         //asl $a000
-        switch chasmcmd.globals.preprocInput[8] {
+        switch chasmcmd.preprocInput[8] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -637,7 +708,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x10, mnemonic: "BPL", mode: .relative),
         //label1: bpl label1
-        switch chasmcmd.globals.preprocInput[9] {
+        switch chasmcmd.preprocInput[9] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -651,7 +722,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x11, mnemonic: "ORA", mode: .indirectIndexed),
         //ora ($20), y
-        switch chasmcmd.globals.preprocInput[10] {
+        switch chasmcmd.preprocInput[10] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -665,7 +736,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x15, mnemonic: "ORA", mode: .zeroPageX),
         //ora $20,x
-        switch chasmcmd.globals.preprocInput[11] {
+        switch chasmcmd.preprocInput[11] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -679,7 +750,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x16, mnemonic: "ASL", mode: .zeroPageX),
         //asl $20,x
-        switch chasmcmd.globals.preprocInput[12] {
+        switch chasmcmd.preprocInput[12] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -693,7 +764,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x18, mnemonic: "CLC", mode: .implied),
         //clc
-        switch chasmcmd.globals.preprocInput[13] {
+        switch chasmcmd.preprocInput[13] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -707,7 +778,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x1D, mnemonic: "ORA", mode: .absoluteX),
         //ora $a000, x
-        switch chasmcmd.globals.preprocInput[14] {
+        switch chasmcmd.preprocInput[14] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -721,7 +792,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x1E, mnemonic: "ASL", mode: .absoluteX),
         //asl $a000, x
-        switch chasmcmd.globals.preprocInput[15] {
+        switch chasmcmd.preprocInput[15] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -737,7 +808,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x20, mnemonic: "JSR", mode: .absolute),
         //jsr $a000
-        switch chasmcmd.globals.preprocInput[16] {
+        switch chasmcmd.preprocInput[16] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -751,7 +822,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x21, mnemonic: "AND", mode: .indexedIndirect),
         //and ($20, x)
-        switch chasmcmd.globals.preprocInput[17] {
+        switch chasmcmd.preprocInput[17] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -765,7 +836,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x24, mnemonic: "BIT", mode: .zeroPage),
         //bit $20
-        switch chasmcmd.globals.preprocInput[18] {
+        switch chasmcmd.preprocInput[18] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -779,7 +850,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x25, mnemonic: "AND", mode: .zeroPage),
         //and $20
-        switch chasmcmd.globals.preprocInput[19] {
+        switch chasmcmd.preprocInput[19] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -793,7 +864,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x26, mnemonic: "ROL", mode: .zeroPage),
         //rol $20
-        switch chasmcmd.globals.preprocInput[20] {
+        switch chasmcmd.preprocInput[20] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -807,7 +878,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x28, mnemonic: "PLP", mode: .implied),
         //plp
-        switch chasmcmd.globals.preprocInput[21] {
+        switch chasmcmd.preprocInput[21] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -821,7 +892,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x29, mnemonic: "AND", mode: .immediate),
         //and #$20
-        switch chasmcmd.globals.preprocInput[22] {
+        switch chasmcmd.preprocInput[22] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -835,7 +906,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x2A, mnemonic: "ROL", mode: .accumulator),
         //rol a
-        switch chasmcmd.globals.preprocInput[23] {
+        switch chasmcmd.preprocInput[23] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -849,7 +920,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x2C, mnemonic: "BIT", mode: .absolute),
         //bit $a000
-        switch chasmcmd.globals.preprocInput[24] {
+        switch chasmcmd.preprocInput[24] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -863,7 +934,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x2D, mnemonic: "AND", mode: .absolute),
         //and $a000
-        switch chasmcmd.globals.preprocInput[25] {
+        switch chasmcmd.preprocInput[25] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -877,7 +948,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x2E, mnemonic: "ROL", mode: .absolute),
         //rol $a000
-        switch chasmcmd.globals.preprocInput[26] {
+        switch chasmcmd.preprocInput[26] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -893,7 +964,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x30, mnemonic: "BMI", mode: .relative),
         //label2: bmi label2
-        switch chasmcmd.globals.preprocInput[27] {
+        switch chasmcmd.preprocInput[27] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -907,7 +978,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x31, mnemonic: "AND", mode: .indirectIndexed),
         //and ($20),y
-        switch chasmcmd.globals.preprocInput[28] {
+        switch chasmcmd.preprocInput[28] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -921,7 +992,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x35, mnemonic: "AND", mode: .zeroPageX),
         //and $20,x
-        switch chasmcmd.globals.preprocInput[29] {
+        switch chasmcmd.preprocInput[29] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -935,7 +1006,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x36, mnemonic: "ROL", mode: .zeroPageX),
         //rol $20, x
-        switch chasmcmd.globals.preprocInput[30] {
+        switch chasmcmd.preprocInput[30] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -949,7 +1020,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x38, mnemonic: "SEC", mode: .implied),
         //sec
-        switch chasmcmd.globals.preprocInput[31] {
+        switch chasmcmd.preprocInput[31] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -963,7 +1034,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x3D, mnemonic: "AND", mode: .absoluteX),
         //and $a000,x
-        switch chasmcmd.globals.preprocInput[32] {
+        switch chasmcmd.preprocInput[32] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -977,7 +1048,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x3E, mnemonic: "ROL", mode: .absoluteX),
         //rol $a000, x
-        switch chasmcmd.globals.preprocInput[33] {
+        switch chasmcmd.preprocInput[33] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -993,7 +1064,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x40, mnemonic: "RTI", mode: .implied),
         //rti
-        switch chasmcmd.globals.preprocInput[34] {
+        switch chasmcmd.preprocInput[34] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1007,7 +1078,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x41, mnemonic: "EOR", mode: .indexedIndirect),
         //eor ($20, x)
-        switch chasmcmd.globals.preprocInput[35] {
+        switch chasmcmd.preprocInput[35] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1021,7 +1092,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x45, mnemonic: "EOR", mode: .zeroPage),
         //eor $20
-        switch chasmcmd.globals.preprocInput[36] {
+        switch chasmcmd.preprocInput[36] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1035,7 +1106,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x46, mnemonic: "LSR", mode: .zeroPage),
         //lsr $20
-        switch chasmcmd.globals.preprocInput[37] {
+        switch chasmcmd.preprocInput[37] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1049,7 +1120,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x48, mnemonic: "PHA", mode: .implied),
         //pha
-        switch chasmcmd.globals.preprocInput[38] {
+        switch chasmcmd.preprocInput[38] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1063,7 +1134,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x49, mnemonic: "EOR", mode: .immediate),
         //eor #$20
-        switch chasmcmd.globals.preprocInput[39] {
+        switch chasmcmd.preprocInput[39] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1077,7 +1148,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x4A, mnemonic: "LSR", mode: .accumulator),
         //lsr a
-        switch chasmcmd.globals.preprocInput[40] {
+        switch chasmcmd.preprocInput[40] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1091,7 +1162,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x4C, mnemonic: "JMP", mode: .absolute),
         //jmp $a000
-        switch chasmcmd.globals.preprocInput[41] {
+        switch chasmcmd.preprocInput[41] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1105,7 +1176,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x4D, mnemonic: "EOR", mode: .absolute),
         //eor $a000
-        switch chasmcmd.globals.preprocInput[42] {
+        switch chasmcmd.preprocInput[42] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1119,7 +1190,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x4E, mnemonic: "LSR", mode: .absolute),
         //lsr $a000
-        switch chasmcmd.globals.preprocInput[43] {
+        switch chasmcmd.preprocInput[43] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1135,7 +1206,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x50, mnemonic: "BVC", mode: .relative),
         //label3:     bvc  label3
-        switch chasmcmd.globals.preprocInput[44] {
+        switch chasmcmd.preprocInput[44] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1149,7 +1220,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x51, mnemonic: "EOR", mode: .indirectIndexed),
         //eor ($20),y
-        switch chasmcmd.globals.preprocInput[45] {
+        switch chasmcmd.preprocInput[45] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1163,7 +1234,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x55, mnemonic: "EOR", mode: .zeroPageX),
         //eor $20,x
-        switch chasmcmd.globals.preprocInput[46] {
+        switch chasmcmd.preprocInput[46] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1177,7 +1248,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x56, mnemonic: "LSR", mode: .zeroPageX),
         //lsr $20, x
-        switch chasmcmd.globals.preprocInput[47] {
+        switch chasmcmd.preprocInput[47] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1191,7 +1262,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x58, mnemonic: "CLI", mode: .implied),
         //cli
-        switch chasmcmd.globals.preprocInput[48] {
+        switch chasmcmd.preprocInput[48] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1205,7 +1276,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x5D, mnemonic: "EOR", mode: .absoluteX),
         //eor $a000, x
-        switch chasmcmd.globals.preprocInput[49] {
+        switch chasmcmd.preprocInput[49] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1219,7 +1290,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x5E, mnemonic: "LSR", mode: .absoluteX),
         //lsr $a000,x
-        switch chasmcmd.globals.preprocInput[50] {
+        switch chasmcmd.preprocInput[50] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1235,7 +1306,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x60, mnemonic: "RTS", mode: .implied),
         //rts
-        switch chasmcmd.globals.preprocInput[51] {
+        switch chasmcmd.preprocInput[51] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1249,7 +1320,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x61, mnemonic: "ADC", mode: .indexedIndirect),
         //adc ($20, x)
-        switch chasmcmd.globals.preprocInput[52] {
+        switch chasmcmd.preprocInput[52] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1263,7 +1334,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x65, mnemonic: "ADC", mode: .zeroPage),
         //adc $20
-        switch chasmcmd.globals.preprocInput[53] {
+        switch chasmcmd.preprocInput[53] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1277,7 +1348,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x66, mnemonic: "ROR", mode: .zeroPage),
         //ror $20
-        switch chasmcmd.globals.preprocInput[54] {
+        switch chasmcmd.preprocInput[54] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1291,7 +1362,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x68, mnemonic: "PLA", mode: .implied),
         //pla
-        switch chasmcmd.globals.preprocInput[55] {
+        switch chasmcmd.preprocInput[55] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1305,7 +1376,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x69, mnemonic: "ADC", mode: .immediate),
         //adc #$20
-        switch chasmcmd.globals.preprocInput[56] {
+        switch chasmcmd.preprocInput[56] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1319,7 +1390,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x6A, mnemonic: "ROR", mode: .accumulator),
         //ror A
-        switch chasmcmd.globals.preprocInput[57] {
+        switch chasmcmd.preprocInput[57] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1333,7 +1404,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x6C, mnemonic: "JMP", mode: .indirect),
         //jmp ($a000)
-        switch chasmcmd.globals.preprocInput[58] {
+        switch chasmcmd.preprocInput[58] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1347,7 +1418,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x6D, mnemonic: "ADC", mode: .absolute),
         //adc $a000
-        switch chasmcmd.globals.preprocInput[59] {
+        switch chasmcmd.preprocInput[59] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1361,7 +1432,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x6E, mnemonic: "ROR", mode: .absolute),
         //ror $a000
-        switch chasmcmd.globals.preprocInput[60] {
+        switch chasmcmd.preprocInput[60] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1377,7 +1448,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x70, mnemonic: "BVS", mode: .relative),
         //label4: bvs label4
-        switch chasmcmd.globals.preprocInput[61] {
+        switch chasmcmd.preprocInput[61] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1391,7 +1462,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x71, mnemonic: "ADC", mode: .indirectIndexed),
         //adc ($20), y
-        switch chasmcmd.globals.preprocInput[62] {
+        switch chasmcmd.preprocInput[62] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1405,7 +1476,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x75, mnemonic: "ADC", mode: .zeroPageX),
         //adc $20, x
-        switch chasmcmd.globals.preprocInput[63] {
+        switch chasmcmd.preprocInput[63] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1419,7 +1490,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x76, mnemonic: "ROR", mode: .zeroPageX),
         //ror $20, x
-        switch chasmcmd.globals.preprocInput[64] {
+        switch chasmcmd.preprocInput[64] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1433,7 +1504,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x78, mnemonic: "SEI", mode: .implied),
         //sei
-        switch chasmcmd.globals.preprocInput[65] {
+        switch chasmcmd.preprocInput[65] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1447,7 +1518,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x7D, mnemonic: "ADC", mode: .absoluteX),
         //adc $a000,x
-        switch chasmcmd.globals.preprocInput[66] {
+        switch chasmcmd.preprocInput[66] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1461,7 +1532,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x7E, mnemonic: "ROR", mode: .absoluteX),
         //ror $a000, x
-        switch chasmcmd.globals.preprocInput[67] {
+        switch chasmcmd.preprocInput[67] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1477,7 +1548,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x81, mnemonic: "STA", mode: .indexedIndirect),
         //sta ($20, x)
-        switch chasmcmd.globals.preprocInput[68] {
+        switch chasmcmd.preprocInput[68] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1491,7 +1562,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x84, mnemonic: "STY", mode: .zeroPage),
         //sty $20
-        switch chasmcmd.globals.preprocInput[69] {
+        switch chasmcmd.preprocInput[69] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1505,7 +1576,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x85, mnemonic: "STA", mode: .zeroPage),
         //sta $20
-        switch chasmcmd.globals.preprocInput[70] {
+        switch chasmcmd.preprocInput[70] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1519,7 +1590,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x86, mnemonic: "STX", mode: .zeroPage),
         //stx $20
-        switch chasmcmd.globals.preprocInput[71] {
+        switch chasmcmd.preprocInput[71] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1533,7 +1604,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x88, mnemonic: "DEY", mode: .implied),
         //dey
-        switch chasmcmd.globals.preprocInput[72] {
+        switch chasmcmd.preprocInput[72] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1547,7 +1618,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x8A, mnemonic: "TXA", mode: .implied),
         //txa
-        switch chasmcmd.globals.preprocInput[73] {
+        switch chasmcmd.preprocInput[73] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1561,7 +1632,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x8C, mnemonic: "STY", mode: .absolute),
         //sty $a000
-        switch chasmcmd.globals.preprocInput[74] {
+        switch chasmcmd.preprocInput[74] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1575,7 +1646,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x8D, mnemonic: "STA", mode: .absolute),
         //sta $a000
-        switch chasmcmd.globals.preprocInput[75] {
+        switch chasmcmd.preprocInput[75] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1589,7 +1660,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x8E, mnemonic: "STX", mode: .absolute),
         //stx $a000
-        switch chasmcmd.globals.preprocInput[76] {
+        switch chasmcmd.preprocInput[76] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1605,7 +1676,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x90, mnemonic: "BCC", mode: .relative),
         //label5:     bcc     label5
-        switch chasmcmd.globals.preprocInput[77] {
+        switch chasmcmd.preprocInput[77] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1619,7 +1690,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x91, mnemonic: "STA", mode: .indirectIndexed),
         //sta ($20), y
-        switch chasmcmd.globals.preprocInput[78] {
+        switch chasmcmd.preprocInput[78] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1633,7 +1704,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x94, mnemonic: "STY", mode: .zeroPageX),
         //sty $20, x
-        switch chasmcmd.globals.preprocInput[79] {
+        switch chasmcmd.preprocInput[79] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1647,7 +1718,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x95, mnemonic: "STA", mode: .zeroPageX),
         //sta $20,x
-        switch chasmcmd.globals.preprocInput[80] {
+        switch chasmcmd.preprocInput[80] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1661,7 +1732,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x96, mnemonic: "STX", mode: .zeroPageY),
         //stx $20, y
-        switch chasmcmd.globals.preprocInput[81] {
+        switch chasmcmd.preprocInput[81] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1675,7 +1746,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x98, mnemonic: "TYA", mode: .implied),
         //tya
-        switch chasmcmd.globals.preprocInput[82] {
+        switch chasmcmd.preprocInput[82] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1689,7 +1760,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x99, mnemonic: "STA", mode: .absoluteY),
         //sta $a000,y
-        switch chasmcmd.globals.preprocInput[83] {
+        switch chasmcmd.preprocInput[83] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1703,7 +1774,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x9A, mnemonic: "TXS", mode: .implied),
         //txs
-        switch chasmcmd.globals.preprocInput[84] {
+        switch chasmcmd.preprocInput[84] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1717,7 +1788,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0x9D, mnemonic: "STA", mode: .absoluteX),
         //sta $a000, x
-        switch chasmcmd.globals.preprocInput[85] {
+        switch chasmcmd.preprocInput[85] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1733,7 +1804,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA0, mnemonic: "LDY", mode: .immediate),
         //ldy #$20
-        switch chasmcmd.globals.preprocInput[86] {
+        switch chasmcmd.preprocInput[86] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1747,7 +1818,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA1, mnemonic: "LDA", mode: .indexedIndirect),
         //lda ($20, x)
-        switch chasmcmd.globals.preprocInput[87] {
+        switch chasmcmd.preprocInput[87] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1761,7 +1832,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA2, mnemonic: "LDX", mode: .immediate),
         //ldx #$20
-        switch chasmcmd.globals.preprocInput[88] {
+        switch chasmcmd.preprocInput[88] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1775,7 +1846,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA4, mnemonic: "LDY", mode: .zeroPage),
         //ldy $20
-        switch chasmcmd.globals.preprocInput[89] {
+        switch chasmcmd.preprocInput[89] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1789,7 +1860,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA5, mnemonic: "LDA", mode: .zeroPage),
         //lda $20
-        switch chasmcmd.globals.preprocInput[90] {
+        switch chasmcmd.preprocInput[90] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1803,7 +1874,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA6, mnemonic: "LDX", mode: .zeroPage),
         //ldx $20
-        switch chasmcmd.globals.preprocInput[91] {
+        switch chasmcmd.preprocInput[91] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1817,7 +1888,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA8, mnemonic: "TAY", mode: .implied),
         //tay
-        switch chasmcmd.globals.preprocInput[92] {
+        switch chasmcmd.preprocInput[92] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1831,7 +1902,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xA9, mnemonic: "LDA", mode: .immediate),
         //lda #$20
-        switch chasmcmd.globals.preprocInput[93] {
+        switch chasmcmd.preprocInput[93] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1845,7 +1916,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xAA, mnemonic: "TAX", mode: .implied),
         //tax
-        switch chasmcmd.globals.preprocInput[94] {
+        switch chasmcmd.preprocInput[94] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1859,7 +1930,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xAC, mnemonic: "LDY", mode: .absolute),
         //ldy $a000
-        switch chasmcmd.globals.preprocInput[95] {
+        switch chasmcmd.preprocInput[95] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1873,7 +1944,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xAD, mnemonic: "LDA", mode: .absolute),
         //lda $a000
-        switch chasmcmd.globals.preprocInput[96] {
+        switch chasmcmd.preprocInput[96] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1887,7 +1958,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xAE, mnemonic: "LDX", mode: .absolute),
         //ldx $a000
-        switch chasmcmd.globals.preprocInput[97] {
+        switch chasmcmd.preprocInput[97] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1903,7 +1974,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xB0, mnemonic: "BCS", mode: .relative),
         //label6:bcs label6
-        switch chasmcmd.globals.preprocInput[98] {
+        switch chasmcmd.preprocInput[98] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1917,7 +1988,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xB1, mnemonic: "LDA", mode: .indirectIndexed),
         //lda ($20), y
-        switch chasmcmd.globals.preprocInput[99] {
+        switch chasmcmd.preprocInput[99] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1931,7 +2002,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xB4, mnemonic: "LDY", mode: .zeroPageX),
         //ldy $20,x
-        switch chasmcmd.globals.preprocInput[100] {
+        switch chasmcmd.preprocInput[100] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1945,7 +2016,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xB5, mnemonic: "LDA", mode: .zeroPageX),
         //lda $20,x
-        switch chasmcmd.globals.preprocInput[101] {
+        switch chasmcmd.preprocInput[101] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1959,7 +2030,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xB6, mnemonic: "LDX", mode: .zeroPageY),
         //ldx $20, y
-        switch chasmcmd.globals.preprocInput[102] {
+        switch chasmcmd.preprocInput[102] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1973,7 +2044,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xB8, mnemonic: "CLV", mode: .implied),
         //clv
-        switch chasmcmd.globals.preprocInput[103] {
+        switch chasmcmd.preprocInput[103] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -1987,7 +2058,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xB9, mnemonic: "LDA", mode: .absoluteY),
         //lda $a000, y
-        switch chasmcmd.globals.preprocInput[104] {
+        switch chasmcmd.preprocInput[104] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2001,7 +2072,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xBA, mnemonic: "TSX", mode: .implied),
         //tsx
-        switch chasmcmd.globals.preprocInput[105] {
+        switch chasmcmd.preprocInput[105] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2015,7 +2086,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xBC, mnemonic: "LDY", mode: .absoluteX),
         //ldy $a000, x
-        switch chasmcmd.globals.preprocInput[106] {
+        switch chasmcmd.preprocInput[106] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2029,7 +2100,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xBD, mnemonic: "LDA", mode: .absoluteX),
         //lda $a000,x
-        switch chasmcmd.globals.preprocInput[107] {
+        switch chasmcmd.preprocInput[107] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2043,7 +2114,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xBE, mnemonic: "LDX", mode: .absoluteY),
         //ldx $a000,y
-        switch chasmcmd.globals.preprocInput[108] {
+        switch chasmcmd.preprocInput[108] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2059,7 +2130,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xC0, mnemonic: "CPY", mode: .immediate),
         //cpy #$20
-        switch chasmcmd.globals.preprocInput[109] {
+        switch chasmcmd.preprocInput[109] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2073,7 +2144,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xC1, mnemonic: "CMP", mode: .indexedIndirect),
         //cmp ($20, x)
-        switch chasmcmd.globals.preprocInput[110] {
+        switch chasmcmd.preprocInput[110] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2087,7 +2158,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xC4, mnemonic: "CPY", mode: .zeroPage),
         //cpy $20
-        switch chasmcmd.globals.preprocInput[111] {
+        switch chasmcmd.preprocInput[111] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2101,7 +2172,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xC5, mnemonic: "CMP", mode: .zeroPage),
         //cmp $20
-        switch chasmcmd.globals.preprocInput[112] {
+        switch chasmcmd.preprocInput[112] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2115,7 +2186,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xC6, mnemonic: "DEC", mode: .zeroPage),
         //dec $20
-        switch chasmcmd.globals.preprocInput[113] {
+        switch chasmcmd.preprocInput[113] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2129,7 +2200,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xC8, mnemonic: "INY", mode: .implied),
         //iny
-        switch chasmcmd.globals.preprocInput[114] {
+        switch chasmcmd.preprocInput[114] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2143,7 +2214,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xC9, mnemonic: "CMP", mode: .immediate),
         //cmp #$20
-        switch chasmcmd.globals.preprocInput[115] {
+        switch chasmcmd.preprocInput[115] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2157,7 +2228,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xCA, mnemonic: "DEX", mode: .implied),
         //dex
-        switch chasmcmd.globals.preprocInput[116] {
+        switch chasmcmd.preprocInput[116] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2171,7 +2242,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xCC, mnemonic: "CPY", mode: .absolute),
         //cpy $a000
-        switch chasmcmd.globals.preprocInput[117] {
+        switch chasmcmd.preprocInput[117] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2185,7 +2256,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xCD, mnemonic: "CMP", mode: .absolute),
         //cmp $a000
-        switch chasmcmd.globals.preprocInput[118] {
+        switch chasmcmd.preprocInput[118] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2199,7 +2270,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xCE, mnemonic: "DEC", mode: .absolute),
         //dec $a000
-        switch chasmcmd.globals.preprocInput[119] {
+        switch chasmcmd.preprocInput[119] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2215,7 +2286,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xD0, mnemonic: "BNE", mode: .relative),
         //label7:     bne label7
-        switch chasmcmd.globals.preprocInput[120] {
+        switch chasmcmd.preprocInput[120] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2229,7 +2300,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xD1, mnemonic: "CMP", mode: .indirectIndexed),
         //cmp ($20), y
-        switch chasmcmd.globals.preprocInput[121] {
+        switch chasmcmd.preprocInput[121] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2243,7 +2314,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xD5, mnemonic: "CMP", mode: .zeroPageX),
         //cmp $20, x
-        switch chasmcmd.globals.preprocInput[122] {
+        switch chasmcmd.preprocInput[122] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2257,7 +2328,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xD6, mnemonic: "DEC", mode: .zeroPageX),
         //dec $20, x
-        switch chasmcmd.globals.preprocInput[123] {
+        switch chasmcmd.preprocInput[123] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2271,7 +2342,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xD8, mnemonic: "CLD", mode: .implied),
         //cld
-        switch chasmcmd.globals.preprocInput[124] {
+        switch chasmcmd.preprocInput[124] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2285,7 +2356,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xDD, mnemonic: "CMP", mode: .absoluteX),
         //cmp $a000, x
-        switch chasmcmd.globals.preprocInput[125] {
+        switch chasmcmd.preprocInput[125] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2299,7 +2370,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xDE, mnemonic: "DEC", mode: .absoluteX),
         //dec $a000,x
-        switch chasmcmd.globals.preprocInput[126] {
+        switch chasmcmd.preprocInput[126] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2315,7 +2386,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xE0, mnemonic: "CPX", mode: .immediate),
         //cpx #$20
-        switch chasmcmd.globals.preprocInput[127] {
+        switch chasmcmd.preprocInput[127] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2329,7 +2400,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xE1, mnemonic: "SBC", mode: .indexedIndirect),
         //sbc ($20, x)
-        switch chasmcmd.globals.preprocInput[128] {
+        switch chasmcmd.preprocInput[128] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2343,7 +2414,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xE4, mnemonic: "CPX", mode: .zeroPage),
         //cpx $20
-        switch chasmcmd.globals.preprocInput[129] {
+        switch chasmcmd.preprocInput[129] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2357,7 +2428,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xE5, mnemonic: "SBC", mode: .zeroPage),
         //sbc $20
-        switch chasmcmd.globals.preprocInput[130] {
+        switch chasmcmd.preprocInput[130] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2371,7 +2442,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xE6, mnemonic: "INC", mode: .zeroPage),
         //inc $20
-        switch chasmcmd.globals.preprocInput[131] {
+        switch chasmcmd.preprocInput[131] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2385,7 +2456,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xE8, mnemonic: "INX", mode: .implied),
         //inx
-        switch chasmcmd.globals.preprocInput[132] {
+        switch chasmcmd.preprocInput[132] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2399,7 +2470,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xE9, mnemonic: "SBC", mode: .immediate),
         //sbc #$20
-        switch chasmcmd.globals.preprocInput[133] {
+        switch chasmcmd.preprocInput[133] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2413,7 +2484,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xEA, mnemonic: "NOP", mode: .implied),
         //nop
-        switch chasmcmd.globals.preprocInput[134] {
+        switch chasmcmd.preprocInput[134] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2427,7 +2498,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xEC, mnemonic: "CPX", mode: .absolute),
         //cpx $a000
-        switch chasmcmd.globals.preprocInput[135] {
+        switch chasmcmd.preprocInput[135] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2441,7 +2512,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xED, mnemonic: "SBC", mode: .absolute),
         //sbc $a000
-        switch chasmcmd.globals.preprocInput[136] {
+        switch chasmcmd.preprocInput[136] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2455,7 +2526,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xEE, mnemonic: "INC", mode: .absolute),
         //inc $a000
-        switch chasmcmd.globals.preprocInput[137] {
+        switch chasmcmd.preprocInput[137] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2471,7 +2542,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xF0, mnemonic: "BEQ", mode: .relative),
         //label8:beq label8
-        switch chasmcmd.globals.preprocInput[138] {
+        switch chasmcmd.preprocInput[138] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2485,7 +2556,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xF1, mnemonic: "SBC", mode: .indirectIndexed),
         //sbc ($20), y
-        switch chasmcmd.globals.preprocInput[139] {
+        switch chasmcmd.preprocInput[139] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2499,7 +2570,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xF5, mnemonic: "SBC", mode: .zeroPageX),
         //sbc $20, x
-        switch chasmcmd.globals.preprocInput[140] {
+        switch chasmcmd.preprocInput[140] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2513,7 +2584,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xF6, mnemonic: "INC", mode: .zeroPageX),
         //inc $20, x
-        switch chasmcmd.globals.preprocInput[141] {
+        switch chasmcmd.preprocInput[141] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2527,7 +2598,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xF8, mnemonic: "SED", mode: .implied),
         //sed
-        switch chasmcmd.globals.preprocInput[142] {
+        switch chasmcmd.preprocInput[142] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2541,7 +2612,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xFD, mnemonic: "SBC", mode: .absoluteX),
         //sbc $a000, x
-        switch chasmcmd.globals.preprocInput[143] {
+        switch chasmcmd.preprocInput[143] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):
@@ -2555,7 +2626,7 @@ struct chasmTest {
 
         //;Opcode(hex: 0xFE, mnemonic: "INC", mode: .absoluteX)
         //inc $a000,x
-        switch chasmcmd.globals.preprocInput[144] {
+        switch chasmcmd.preprocInput[144] {
         case .directive:
             #expect(Bool(false))
         case .code(let c):

@@ -1,0 +1,56 @@
+;;; C-64 program, installed at $4000, flashes border during the raster interrupt
+.def CTRL1  		$d011
+.def RASTER 		$d012
+.def IRQ_MSK		$d019
+.def IRQ_EN			$d01A
+.def BORDER 		$d020
+
+.def IRQ_VEC_LOW	$0314
+.def IRQ_VEC_HIGH	$0315
+
+.org $4000
+
+jmp setupIRQ
+
+; addr here is $4000 + 3 (sizeof jmp)
+customIRQ:
+
+; ack the int
+asl IRQ_MSK
+
+inc BORDER
+
+; exit back to kernal irq handler
+jmp $ea31
+
+setupIRQ:
+
+sei
+
+;;; enable raster interrupts from vic-ii
+lda #$7f	; turn off CIA 1 timer interrupts
+sta $dc0d
+lda $dc0d	; ack pending CIA ints
+lda $dd0d
+
+lda #$1b	; bit 8 of raster ctrl1 clear for lines 0-255
+sta CTRL1
+
+lda #$ff	; trigger int at scanline 100
+sta RASTER
+
+;;; redirect IRQ vector to custom handler
+lda #<customIRQ		; low byte of customIRQ address
+sta IRQ_VEC_LOW
+lda #>customIRQ		; high byte of customIRQ address
+sta IRQ_VEC_HIGH
+
+lda #01		; enable raster int flag
+sta IRQ_EN
+
+cli			; re-enable interrupts
+
+start:
+nop
+jmp start
+

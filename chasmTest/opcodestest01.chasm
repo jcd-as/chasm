@@ -26,3 +26,10 @@ lda also_not_yet_declared, y
 not_yet_declared:
 ALSO_NOT_YET_DECLARED:
 jmp (lab1)
+
+lda <ALSO_NOT_YET_DECLARED      ; low-byte of label
+lda >ALSO_NOT_YET_DECLARED      ; high-byte of label
+lda #<ALSO_NOT_YET_DECLARED      ; low-byte of label
+lda #>ALSO_NOT_YET_DECLARED      ; high-byte of label
+ldx <not_yet_declared, y
+ldx >not_yet_declared, y

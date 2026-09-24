@@ -5,13 +5,15 @@
 //  Created by Josh Shepard on 9/15/26.
 //
 // TODO:
-// * need to implement <[symbol] and >[symbol] to extract Low and High bytes
-// * need to support basic math on symbols (esp +[offset])
-// * should differentiate labels and .defs in symbol table so that we can...
+// P1
+// * ?should differentiate labels and .defs in symbol table so that we can...
 // * add -s option to generate symbols file (format: '<symbol>    <hex address>' per line)
-// * directives: .data, .string, .byte, .word, .include, .incbin...
+// * directives: .data, .string, .word, .include, .incbin...
 // * pre-processing (defs/equs, macros)
+//   (should we just use the C preproc? e.g. 'clang -E -P -x assembler-with-cpp test.chasm -o test.pp')
 // * sub-routines (local labels/symbols)
+// P2
+// * support basic math on symbols (esp +[offset])
 // * error handling - better error messages from closer to failure site
 // * error handling - keep emitting errors through each pass & only fail at end of pass
 // * will need (at least) .RORG directive to support loadable segments (i.e. for NES cartridge RAM)
@@ -20,23 +22,6 @@
 import ArgumentParser
 import Foundation
 
-public enum Register: Decodable {
-	case A
-	case X
-	case Y
-}
-
-public enum Arg1: Decodable {
-	case Addr8(UInt8)
-	case Immed8(UInt8)
-	case Addr16(UInt16)
-	case Reg(Register)
-}
-
-public enum Arg2: Decodable {
-	case Num8(UInt8)
-	case Reg(Register)
-}
 
 public struct CodeLine: Decodable {
 	let linenum: UInt16  // line number (from the original text!)
@@ -71,17 +56,14 @@ public func lowByte(_ word: UInt16) -> UInt8 {
 	return UInt8(word & 0xFF)
 }
 
-// global symbols, incl the symbol table and the "tokenized" and preprocessed input
-// an instance of will be passed around as inout parameter
-public struct Globals: Decodable {
-	// the global symbol table tracking labels and their addresses
-	var symbolTable: [String: UInt16] = [:]
-	var preprocInput: [Line] = []
-}
 
 @main
 public struct Chasm: ParsableCommand {
-	var globals: Globals = Globals()
+	// the symbol table tracking labels/defs and their addresses
+	var symbolTable: [String: UInt16] = [:]
+	// the pre-processed output of pass one
+	var preprocInput: [Line] = []
+	// the buffer to write the binary output of pass two
 	var buf = ContiguousArray<UInt8>()
 
 	// explicit public init is needed
@@ -152,7 +134,7 @@ public struct Chasm: ParsableCommand {
 
 	// (initial org is assumed to be zero *unless* the first non-.def line is an .org line)
 	var initialOrg: UInt16 {
-		for line in globals.preprocInput {
+		for line in preprocInput {
 			switch line {
 			case .directive(let d):
 				if d.name == ".ORG" {
@@ -180,10 +162,10 @@ public struct Chasm: ParsableCommand {
 		}
 	}
 
-	// passTwo takes the globals produced by passOne and generates code from them
+	// passTwo takes the output produced by passOne and generates code from it
 	public mutating func passTwo() {
 		var loc: UInt16 = 0
-		for line in globals.preprocInput {
+		for line in preprocInput {
 			generateCode(line, from: &loc)
 		}
 	}
@@ -201,7 +183,7 @@ public struct Chasm: ParsableCommand {
 
 	public mutating func generateForDirective(_ line: DirectiveLine, from: inout UInt16) {
 		// TODO: impl all directives
-		// .org, .def, .data, .string, .byte, .word, .include, .incbin...
+		// .data, .string, .word, .include, .incbin...
 		switch line.name {
 		case ".DEF":
 			break
@@ -212,14 +194,6 @@ public struct Chasm: ParsableCommand {
 					err("invalid .ORG directive", line: line.linenum)
 					abort()
 				}
-				/*
-				// TODO: this should be done by using .DATA, .BYTE or .WORD
-				// fill from current position to new position with BRKs ($00)
-				for _ in 0..<len {
-					buf.append(0)
-					from += 1
-				}
-				*/
 			} else {
 				err("invalid .ORG directive", line: line.linenum)
 				abort()
@@ -286,7 +260,7 @@ public struct Chasm: ParsableCommand {
 					}
 				} else {
 					// if arg is a label, get the label address
-					if let target = globals.symbolTable[line.arg1] {
+					if let target = wordForSymbol(line.arg1) {
 						// distance from (current addr+2) to target MUST be from -128 to +127
 						let delta = Int(target) - (Int(line.offset) + 2)
 						if delta > 127 || delta < -128 {
@@ -314,7 +288,7 @@ public struct Chasm: ParsableCommand {
 				let w = wordForAddr(line.arg1)
 				// write output in little-endian byte order
 				let high = highByte(w)
-				let low = lowByte()(w)
+				let low = lowByte(w)
 				buf.append(low)
 				buf.append(high)
 			}
@@ -325,15 +299,42 @@ public struct Chasm: ParsableCommand {
 	func byteForImmediate(_ immed: String) -> UInt8 {
 		let optn = parseImmediate(immed)
 		if let n = optn {
-			// number?
-			if n < 256 { return UInt8(n) }
-			fatal("immediate too large: '\(immed)'")
+			return n
 		}
-		fatal("invalid immediate: '\(immed)'")
+		fatal("invalid immediate value: '\(immed)'")
 	}
 	
+	// get a word for a symbol, respecting </> operators
+	func wordForSymbol(_ sym: String) -> UInt16? {
+		var getLow: Bool = false, getHigh: Bool = false
+		var s: String
+		if sym.first == "<" {
+			getLow = true
+			s = String(sym.trimmingPrefix("<"))
+		} else if sym.first == ">" {
+			getHigh = true
+			s = String(sym.trimmingPrefix(">"))
+		} else {
+			s = sym
+		}
+
+		let optn = symbolTable[s]
+		if let n = optn {
+			if getLow {
+				return UInt16(lowByte(n))
+			} else if getHigh {
+				return UInt16(highByte(n))
+			} else {
+				return n
+			}
+		} else {
+			return nil
+		}
+	}
+
 	// get a byte for a symbol, respecting </> operators and 
 	// checking to make sure a symbol is < 256
+	// (used, for instance, by the branch instructions)
 	func byteForSymbol(_ sym: String) -> UInt8? {
 		var getLow: Bool = false, getHigh: Bool = false
 		var s: String
@@ -342,18 +343,20 @@ public struct Chasm: ParsableCommand {
 			s = String(sym.trimmingPrefix("<"))
 		} else if sym.first == ">" {
 			getHigh = true
-			s = String(sym.trimmingPrefix("<"))
+			s = String(sym.trimmingPrefix(">"))
 		} else {
 			s = sym
 		}
 			
-		let optn = globals.symbolTable[s]
+		let optn = symbolTable[s]
 		if let n = optn {
 			if getLow {
 				return lowByte(n)
 			} else if getHigh {
-			} else {
 				return highByte(n)
+			} else {
+				if n < 256 { return UInt8(n) }
+				else { return nil }
 			}
 		} else {
 			return nil
@@ -368,11 +371,9 @@ public struct Chasm: ParsableCommand {
 			fatal("expected 8-bit address: '\(addr)'")
 		} else {
 			// symbol?
-			// TODO: call byteForSymbol() here to handle </> low/high byte
-			let optn = globals.symbolTable[addr]
+			let optn = byteForSymbol(addr)
 			if let n = optn {
-				if n < 256 { return UInt8(n) }
-				fatal("expected 8-bit address: '\(addr)'")
+				return n
 			} else {
 				fatal("invalid symbol '\(addr)'")
 			}
@@ -387,8 +388,7 @@ public struct Chasm: ParsableCommand {
 			return n
 		} else {
 			// symbol?
-			let optn = globals.symbolTable[addr]
-			if let n = optn {
+			if let n = wordForSymbol(addr) {
 				return n
 			} else {
 				fatal("invalid symbol '\(addr)'")
@@ -407,7 +407,7 @@ public struct Chasm: ParsableCommand {
 		// directive?
 		let d = directive(line, number: number, from: pc)
 		if let dir = d {
-			globals.preprocInput.append(Line.directive(dir))
+			preprocInput.append(Line.directive(dir))
 			// if the directive changed the pc, change it
 			if let npc = dir.newPC {
 				if npc < offset {
@@ -420,7 +420,7 @@ public struct Chasm: ParsableCommand {
 			// code line?
 			let c = code(line, number: number, from: pc)
 			if let code = c {
-				globals.preprocInput.append(Line.code(code))
+				preprocInput.append(Line.code(code))
 				offset += code.byteSize
 			} else {
 				// comment-only line, no-op
@@ -431,7 +431,7 @@ public struct Chasm: ParsableCommand {
 	}
 
 	// TODO: handle all directives
-	// .org, .def, .data, .string, .byte, .word, .include, .incbin...
+	// .data, .string, .word, .include, .incbin...
 	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16)
 		-> DirectiveLine?
 	{
@@ -478,12 +478,12 @@ public struct Chasm: ParsableCommand {
 
 			if let n = parseNum(rhs) {
 				// check for dups
-				if globals.symbolTable[lhs] != nil {
+				if symbolTable[lhs] != nil {
 					err(".DEF symbol redefinition: '\(lhs)'", line: number)
 					abort()
 				}
 				// enter into symbol table
-				globals.symbolTable[lhs] = n
+				symbolTable[lhs] = n
 				return DirectiveLine(linenum: number, offset: pc, name: name, content: "", newPC: nil)
 			} else {
 				err("invalid .DEF value: '\(rhs)'", line: number)
@@ -518,12 +518,12 @@ public struct Chasm: ParsableCommand {
 				abort()
 			}
 			// check for dups
-			if globals.symbolTable[label] != nil {
+			if symbolTable[label] != nil {
 				err("symbol redefinition: '\(label)'", line: number)
 				abort()
 			}
 			// add label to symbol table with current pc
-			globals.symbolTable[label] = pc
+			symbolTable[label] = pc
 
 			code = String(ssplit[1])
 		} else {
@@ -598,12 +598,19 @@ public struct Chasm: ParsableCommand {
 
 	// if input is an immediate (e.g. '#$ff'), returns it as a UInt16,
 	// else returns nil
-	public func parseImmediate(_ n: String) -> UInt16? {
+	public func parseImmediate(_ n: String) -> UInt8? {
 		if n[n.startIndex] == "#" {
-			return parseNum(String(n.trimmingPrefix("#")))
-		} else {
-			return nil
+			if let n = parseNum(String(n.trimmingPrefix("#"))) {
+				// number
+				if n < 256 {
+					return UInt8(n)
+				}
+			} else if let n = byteForSymbol(String(n.trimmingPrefix("#"))) {
+				// symbol
+				return n
+			}
 		}
+		return nil
 	}
 
 	func validOpcode(_ opcode: String) -> Bool {
@@ -692,7 +699,8 @@ public struct Chasm: ParsableCommand {
 					// zero page: 1 arg, 8 bits, e.g. LDA $ff
 					return .zeroPage
 				}
-			} else if let sym = globals.symbolTable[arg1.uppercased()] {
+			}
+			else if let sym = wordForSymbol(arg1.uppercased()) {
 				// it's a symbol, look it up in the symbol table
 				// jmp instructions don't have zero-page versions
 				if opcode == "JMP" || opcode == "JSR" || sym > 255 {
@@ -711,8 +719,8 @@ public struct Chasm: ParsableCommand {
 			// two arg instructions
 			if arg2 == "X" {
 				// symbol or number?
-				if let sym = globals.symbolTable[arg1.uppercased()] {
-					// TODO: symbols with </> prefix (low/high byte) should be zero-page
+				if let sym = wordForSymbol(arg1.uppercased()) {
+					// 8-bit symbols or 16-bit with </> prefix (low/high byte) should be zero-page
 					if sym < 256 { return .zeroPageX }
 					return .absoluteX
 				} else {
@@ -754,8 +762,8 @@ public struct Chasm: ParsableCommand {
 					return .indirectIndexed
 				}
 				// symbol or number?
-				if let sym = globals.symbolTable[arg1.uppercased()] {
-					// TODO: symbols with </> prefix (low/high byte) should be zero-page
+				if let sym = wordForSymbol(arg1.uppercased()) {
+					// 8-bit symbols or 16-bit with </> prefix (low/high byte) should be zero-page
 					if sym < 256 { return .zeroPageY }
 					return .absoluteY
 				} else {
