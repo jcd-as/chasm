@@ -68,5 +68,51 @@
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "FCECE0AB-A551-4125-A0DB-3A97506690CA"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "chasm/chasm.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "165"
+            endingLineNumber = "165"
+            landmarkName = "writeSymbolFile(_:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "FCECE0AB-A551-4125-A0DB-3A97506690CA - 825a1e8ea6616015"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "chasm.Chasm.writeSymbolFile(Foundation.URL) throws -&gt; ()"
+                  moduleName = "chasm"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jcs/src/chasm/chasm/chasm.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "165"
+                  endingLineNumber = "165">
+               </Location>
+               <Location
+                  uuid = "FCECE0AB-A551-4125-A0DB-3A97506690CA - 825a1e8ea6616015"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "chasm.Chasm.writeSymbolFile(Foundation.URL) throws -&gt; ()"
+                  moduleName = "chasm"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jcs/src/chasm/chasm/chasm.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "165"
+                  endingLineNumber = "165">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
    </Breakpoints>
 </Bucket>

@@ -58,6 +58,18 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/jcs/src/chasm/chasm/chasm.swift"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/jcs/src/chasm/samples/c64-01.chasm"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-d"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-s"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

@@ -6,8 +6,6 @@
 //
 // TODO:
 // P1
-// * ?should differentiate labels and .defs in symbol table so that we can...
-// * add -s option to generate symbols file (format: '<symbol>    <hex address>' per line)
 // * directives: .data, .string, .word, .include, .incbin...
 // * pre-processing (defs/equs, macros)
 //   (should we just use the C preproc? e.g. 'clang -E -P -x assembler-with-cpp test.chasm -o test.pp')
@@ -67,7 +65,9 @@ public struct Chasm: ParsableCommand {
 	var buf = ContiguousArray<UInt8>()
 
 	// explicit public init is needed
-	public init() {}
+	public init() {
+		buf.reserveCapacity(64*1024)
+	}
 
 	@Argument(help: "input .chasm filename")
 	var input: String
@@ -75,8 +75,11 @@ public struct Chasm: ParsableCommand {
 	@Option(name: [.short, .long], help: "output filename")
 	var output: String?
 
-	@Flag(name: [.short, .long], help: "produce c64 header?")
+	@Flag(name: [.customShort("d"), .long], help: "produce c64 header?")
 	var header: Int
+
+	@Flag(name: [.short, .long], help: "produce DASM-compatible symbol file?")
+	var symbols: Int
 
 	// MARK: main entry point
 
@@ -116,7 +119,7 @@ public struct Chasm: ParsableCommand {
 		var data = buf.withUnsafeBytes { rawbuf in
 			Data(bytes: rawbuf.baseAddress!, count: rawbuf.count)
 		}
-		// if -h, add a header with the initial org
+		// if -d, add a header with the initial org
 		if header != 0 {
 			let org = initialOrg
 			let high = highByte(org)
@@ -129,6 +132,13 @@ public struct Chasm: ParsableCommand {
 			print("wrote \(outURL.relativePath)")
 		} catch {
 			print("error writing file: \(error)")
+		}
+		// if -s, write a symbol file
+		if symbols != 0 {
+			let url = URL(fileURLWithPath: input)
+			let symURL = url.deletingPathExtension().appendingPathExtension("sym")
+			writeSymbolFile(symURL)
+			print("wrote \(symURL.relativePath)")
 		}
 	}
 
@@ -149,6 +159,25 @@ public struct Chasm: ParsableCommand {
 			}
 		}
 		return 0
+	}
+
+	func writeSymbolFile(_ url: URL) {
+		FileManager.default.createFile(atPath: url.path, contents: nil)
+		guard let fh = try? FileHandle(forWritingTo: url) else {
+			fatal("error writing symbol file: '\(url.relativePath)'")
+		}
+		for (sym, addr) in symbolTable {
+			let plen = 63 - sym.count
+			let padding = String(repeating: " ", count: plen)
+			let line = "\(sym) \(padding)\(String(format: "%04x", addr))\n"
+			if let data = line.data(using: .utf8) {
+				do {
+					try fh.write(contentsOf: data)
+				} catch {
+					fatal("error writing lines to symbol file: '\(url.relativePath)'")
+				}
+			}
+		}
 	}
 
 	// MARK: passes
