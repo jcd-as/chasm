@@ -524,7 +524,7 @@ struct chasmTest {
             #expect(c.arg2 == "")
         }
     }
-    
+
     @Test func passTwoTest01() async throws {
         let fnurl = try fileURL("passtwotest01", withExtension: "chasm")
         let args = [fnurl.path()]
@@ -569,7 +569,99 @@ struct chasmTest {
         #expect(chasmcmd.buf[266] == 0xF6)
         #expect(chasmcmd.buf[267] == 0x00)
     }
-    
+
+    @Test func passTwoTest03() async throws {
+        let fnurl = try fileURL("passonetest02", withExtension: "chasm")
+        let args = [fnurl.path()]
+        let cmd = try Chasm.parseAsRoot(args)
+        var chasmcmd = try #require(cmd as? Chasm)
+        try chasmcmd.run()
+
+        #expect(chasmcmd.preprocInput.count == 5)
+        #expect(chasmcmd.buf.count == 44)
+
+        // line 1 - .ORG
+        switch chasmcmd.preprocInput[0] {
+        case .directive(let d):
+            #expect(d.linenum == 0)
+            #expect(d.name == ".ORG")
+            #expect(d.content == "$1000")
+        case .code:
+            #expect(Bool(false))
+        }
+
+        // line 2 - .BYTE $ea, $16      ; 16 NOPs
+        switch chasmcmd.preprocInput[1] {
+        case .directive(let d):
+            #expect(d.linenum == 1)
+            #expect(d.name == ".BYTE")
+            #expect(d.content == "$EA, $10")
+        case .code:
+            #expect(Bool(false))
+        }
+        #expect(chasmcmd.buf[0] == 0xea)
+        #expect(chasmcmd.buf[8] == 0xea)
+        #expect(chasmcmd.buf[15] == 0xea)
+
+        //.word $feed, $03    ; $feedfeedfeed
+        switch chasmcmd.preprocInput[2] {
+        case .directive(let d):
+            #expect(d.linenum == 2)
+            #expect(d.name == ".WORD")
+            #expect(d.content == "$FEED, $03")
+        case .code:
+            #expect(Bool(false))
+        }
+        #expect(chasmcmd.buf[16] == 0xed)
+        #expect(chasmcmd.buf[17] == 0xfe)
+        #expect(chasmcmd.buf[18] == 0xed)
+        #expect(chasmcmd.buf[19] == 0xfe)
+        #expect(chasmcmd.buf[20] == 0xed)
+        #expect(chasmcmd.buf[21] == 0xfe)
+
+        //.data $0f $1e $2d $3c $4b $5a $69 $78 $87 $96 $a5 $b4 $c3 $d2 $e1 $f0       ; 16 bytes
+        switch chasmcmd.preprocInput[3] {
+        case .directive(let d):
+            #expect(d.linenum == 3)
+            #expect(d.name == ".DATA")
+            #expect(d.content == "$0F $1E $2D $3C $4B $5A $69 $78 $87 $96 $A5 $B4 $C3 $D2 $E1 $F0")
+        case .code:
+            #expect(Bool(false))
+        }
+        #expect(chasmcmd.buf[22] == 0x0f)
+        #expect(chasmcmd.buf[23] == 0x1e)
+        #expect(chasmcmd.buf[24] == 0x2d)
+        #expect(chasmcmd.buf[25] == 0x3c)
+        #expect(chasmcmd.buf[26] == 0x4b)
+        #expect(chasmcmd.buf[27] == 0x5a)
+        #expect(chasmcmd.buf[28] == 0x69)
+        #expect(chasmcmd.buf[29] == 0x78)
+        #expect(chasmcmd.buf[30] == 0x87)
+        #expect(chasmcmd.buf[31] == 0x96)
+        #expect(chasmcmd.buf[32] == 0xa5)
+        #expect(chasmcmd.buf[33] == 0xb4)
+        #expect(chasmcmd.buf[34] == 0xc3)
+        #expect(chasmcmd.buf[35] == 0xd2)
+        #expect(chasmcmd.buf[36] == 0xe1)
+        #expect(chasmcmd.buf[37] == 0xf0)
+
+        //.string "FOOBAR"   ;
+        switch chasmcmd.preprocInput[4] {
+        case .directive(let d):
+            #expect(d.linenum == 4)
+            #expect(d.name == ".STRING")
+            #expect(d.content == "\"FOOBAR\"")
+        case .code:
+            #expect(Bool(false))
+            #expect(chasmcmd.buf[38] == 70)
+            #expect(chasmcmd.buf[39] == 79)
+            #expect(chasmcmd.buf[40] == 79)
+            #expect(chasmcmd.buf[41] == 66)
+            #expect(chasmcmd.buf[42] == 65)
+            #expect(chasmcmd.buf[43] == 82)
+        }
+    }
+
     @Test func opcodestest02() async throws {
         let fnurl = try fileURL("opcodestest02", withExtension: "chasm")
         let args = [fnurl.path()]

@@ -227,6 +227,18 @@ public struct Chasm: ParsableCommand {
 				err("invalid .ORG directive", line: line.linenum)
 				abort()
 			}
+		case ".DATA":
+			// .DATA $ea $ff $01 $00 $ea ; generates the literal bytes ea ff 01 00 ea
+			let parts = line.content.split { $0.isWhitespace }
+			for part in parts {
+				if let val = parseNum(String(part.trimmingCharacters(in: .whitespaces))) {
+				if val > 255 {
+					err(".BYTE directive value >255: \(parts[0])", line: line.linenum)
+					abort()
+				}
+					buf.append(UInt8(val))
+				}
+			}
 		case ".BYTE":
 			// .BYTE $ea, $ff ; generates 255 NOPs
 			let parts = line.content.split(separator: ",", maxSplits: 1)
@@ -251,6 +263,44 @@ public struct Chasm: ParsableCommand {
 				err("invalid .BYTE directive value: \(parts[0])", line: line.linenum)
 				abort()
 			}
+		case ".WORD":
+			let parts = line.content.split(separator: ",", maxSplits: 1)
+			if let val = parseNum(String(parts[0].trimmingCharacters(in: .whitespaces))) {
+				if parts.count == 2 {
+					if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
+						// fill from current position with 'val'
+						for _ in 0..<len {
+							let low = lowByte(val)
+							let high = highByte(val)
+							buf.append(low)
+							buf.append(high)
+							from += 2
+						}
+					} else {
+						err("invalid .WORD directive count: \(parts[1])", line: line.linenum)
+						abort()
+					}
+				}
+			} else {
+				err("invalid .WORD directive value: \(parts[0])", line: line.linenum)
+				abort()
+			}
+			break
+		case ".STRING":
+			// ensure this is a "" enclosed string
+			if line.content.first != "\"" || line.content.last != "\"" {
+				err("invalid .STRING directive value: \(line.content)", line: line.linenum)
+			}
+			// TODO: replace escaped quotes (\") in content
+			for c in line.content.trimmingCharacters(in: CharacterSet(charactersIn: "\"")) {
+				if let ascii = c.asciiValue {
+					buf.append(ascii)
+					from += 1
+				} else {
+					err("invalid .STRING directive value, non-ascii characters: \(line.content)", line: line.linenum)
+				}
+			}
+			break
 		default:
 			break
 		}
@@ -487,7 +537,19 @@ public struct Chasm: ParsableCommand {
 			}
 			return DirectiveLine(
 				linenum: number, offset: pc, name: name, content: content, newPC: npc)
+		case ".DATA":
+			// TODO: validate content ?
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: nil)
 		case ".BYTE":
+			// TODO: validate content ?
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: nil)
+		case ".WORD":
+			// TODO: validate content ?
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: nil)
+		case ".STRING":
 			// TODO: validate content ?
 			return DirectiveLine(
 				linenum: number, offset: pc, name: name, content: content, newPC: nil)

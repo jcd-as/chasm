@@ -1,0 +1,5 @@
+.org $1000          ;
+.byte $ea, $10       ; 16 nops
+.word $feed, $03    ; $feedfeedfeed
+.data $0f $1e $2d $3c $4b $5a $69 $78 $87 $96 $a5 $b4 $c3 $d2 $e1 $f0       ; 16 bytes
+.string "FOOBAR"   ;
