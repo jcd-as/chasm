@@ -31,11 +31,29 @@ struct chasmTest {
         var chasmcmd = try #require(cmd as? Chasm)
         try chasmcmd.run()
 
-        #expect(chasmcmd.preprocInput.count == 1)
+        #expect(chasmcmd.preprocInput.count == 3)
         switch chasmcmd.preprocInput[0] {
         case .directive(let directive):
             #expect(directive.name == ".ORG")
             #expect(directive.content == "$1000")
+            #expect(directive.newPC == 4096)
+        case .code:
+            #expect(Bool(false))
+        }
+
+        switch chasmcmd.preprocInput[1] {
+        case .directive(let directive):
+            #expect(directive.name == ".SUB")
+            #expect(directive.content == "FOO:")
+            #expect(directive.newPC == 4096)
+        case .code:
+            #expect(Bool(false))
+        }
+
+        switch chasmcmd.preprocInput[2] {
+        case .directive(let directive):
+            #expect(directive.name == ".ENDSUB")
+            #expect(directive.content == "")
             #expect(directive.newPC == 4096)
         case .code:
             #expect(Bool(false))

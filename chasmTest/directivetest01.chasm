@@ -1,1 +1,3 @@
 .org $1000
+.sub foo:
+.endsub

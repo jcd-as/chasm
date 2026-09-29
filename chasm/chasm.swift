@@ -6,8 +6,8 @@
 //
 // TODO:
 // P1
-// * sub-routines (local labels/symbols)
-// * directives: .include, .incbin, macros (.mac)
+// * directives: .include, .incbin, 
+// * macros: .mac/.endmac - all enclosed labels must be local
 // P2
 // * support basic math on symbols (esp +[offset])
 // * error handling - better error messages from closer to failure site
@@ -59,6 +59,12 @@ public struct Chasm: ParsableCommand {
 	var preprocInput: [Line] = []
 	// the buffer to write the binary output of pass two
 	var buf = ContiguousArray<UInt8>()
+
+	// flag to indicate we are currently parsing a sub-routine
+	// (contains the sub-routine name)
+	var sub = ""
+	// flag to indicate we are currently parsing a macro
+	//var mac = false
 
 	// explicit public init is needed
 	public init() {
@@ -191,6 +197,476 @@ public struct Chasm: ParsableCommand {
 		var loc: UInt16 = 0
 		for line in preprocInput {
 			generateCode(line, from: &loc)
+		}
+	}
+
+	// MARK: pass one methods
+
+	public mutating func parseLine(_ line: String, number: UInt16, from pc: UInt16) -> UInt16 {
+		var offset = pc
+		if line.count == 0 || line.trimmingCharacters(in: .whitespaces).count == 0 {
+			// empty line, no-op
+			return offset
+		}
+		// directive?
+		let d = directive(line, number: number, from: pc)
+		if let dir = d {
+			preprocInput.append(Line.directive(dir))
+			// if the directive changed the pc, change it
+			if let npc = dir.newPC {
+				if npc < offset {
+					err("directive cannot set org prior to current location", line: number)
+					abort()
+				}
+				offset = npc
+			}
+		} else {
+			// code line?
+			let c = code(line, number: number, from: pc)
+			if let code = c {
+				preprocInput.append(Line.code(code))
+				offset += code.byteSize
+			} else {
+				// comment-only line, no-op
+				return offset
+			}
+		}
+		return offset
+	}
+
+	// TODO: handle all directives .include, .incbin, .mac...
+	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16)
+		-> DirectiveLine?
+	{
+		// strip off comments
+		let stripped = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)[0]
+		// directive? (starts with '.' IN COLUMN 1!)
+		if !stripped.hasPrefix(".") {
+			return nil
+		}
+		let parts = stripped.split(maxSplits: 1) { $0.isWhitespace }
+		let name = String(parts[0]).trimmingCharacters(in: .whitespaces).uppercased()
+		let content = parts.count < 2 ? "" : String(parts[1]).trimmingCharacters(in: .whitespaces).uppercased()
+		var npc = pc
+		// TODO: impl .include, .incbin, .mac
+		switch name.uppercased() {
+		case ".SUB":
+			// 'content' should be a valid label
+			if !content.hasSuffix(":") {
+				err("invalid .SUB label: '\(content)', missing ':'", line: number)
+				abort()
+			}
+			let label = String(content.dropLast(1))
+			if !validLabel(label) {
+				err("invalid .SUB label: '\(content)'", line: number)
+				abort()
+			}
+			// TODO: this code is the same as in code() below...
+			// check for dups
+			if symbolTable[label] != nil {
+				err("symbol redefinition: '\(label)'", line: number)
+				abort()
+			}
+			// add label to symbol table with current pc
+			symbolTable[label] = pc
+			sub = label
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc)
+		case ".ENDSUB":
+			sub = ""
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc)
+		case ".ORG":
+			// 'content' should be convertible to a hex number
+			if let n = parseNum(content) {
+				npc = n
+			} else {
+				err("invalid number '\(content)'", line: number)
+				abort()
+			}
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: npc)
+		case ".DATA":
+			// TODO: validate content ?
+			let parts = content.split { $0.isWhitespace }
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content,
+				newPC: pc + UInt16(parts.count))
+		case ".BYTE":
+			// TODO: validate content ?
+			let parts = content.split(separator: ",", maxSplits: 1)
+			var npc = pc
+			if parts.count == 2 {
+				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
+					npc += len
+				} else {
+					err("invalid .BYTE directive count: \(parts[1])", line: number)
+					abort()
+				}
+			} else {
+				npc += 1
+			}
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: npc)
+		case ".WORD":
+			// TODO: validate content ?
+			let parts = content.split(separator: ",", maxSplits: 1)
+			var npc = pc
+			if parts.count == 2 {
+				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
+					npc += len * 2
+				} else {
+					err("invalid .BYTE directive count: \(parts[1])", line: number)
+					abort()
+				}
+			} else {
+				npc += 2
+			}
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: npc)
+		case ".STRING":
+			// TODO: validate content ?
+			let len = content.count
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc + UInt16(len))
+		case ".DEF":
+			// parse out symbol & value from 'content'
+			let contentparts = content.split(maxSplits: 1) { $0.isWhitespace }
+			if contentparts.count != 2 {
+				err("invalid .DEF: '\(content)'", line: number)
+				abort()
+			}
+			let lhs = String(contentparts[0].trimmingCharacters(in: .whitespaces))
+			let rhs = String(contentparts[1].trimmingCharacters(in: .whitespaces))
+			if !validLabel(lhs) {
+				err("invalid .DEF symbol name: '\(lhs)'", line: number)
+				abort()
+			}
+
+			if let n = parseNum(rhs) {
+				// check for dups
+				if symbolTable[lhs] != nil {
+					err(".DEF symbol redefinition: '\(lhs)'", line: number)
+					abort()
+				}
+				// enter into symbol table
+				symbolTable[lhs] = n
+				return DirectiveLine(
+					linenum: number, offset: pc, name: name, content: "", newPC: nil)
+			} else {
+				err("invalid .DEF value: '\(rhs)'", line: number)
+				abort()
+			}
+		default:
+			return nil
+		}
+	}
+
+	public mutating func code(_ line: String, number: UInt16, from pc: UInt16) -> CodeLine? {
+		// label: opcode arg1, arg2 ; comment
+
+		// strip comments, if any
+		let stripped = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)[0]
+		if stripped.trimmingCharacters(in: .whitespaces).count == 0 {
+			return nil
+		}
+		// look for ':'
+		let ssplit = stripped.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+		var label = ""
+		var code = ""
+		if ssplit.count == 2 {
+			label = String(ssplit[0]).uppercased()
+			if !validLabel(label) {
+				err("invalid label", line: number)
+				abort()
+			}
+			// ensure col 0 is non-whitespace
+			if label[label.startIndex].isWhitespace {
+				err("labels must start in the first column", line: number)
+				abort()
+			}
+			// TODO: if we're in a sub we need to check for local labels
+			//       and prepend the sub name to them
+			if sub.count > 0 {
+				if label.first == "@" {
+					label = "\(sub)\(label)"
+				}
+			}
+			// check for dups
+			if symbolTable[label] != nil {
+				err("symbol redefinition: '\(label)'", line: number)
+				abort()
+			}
+			// add label to symbol table with current pc
+			symbolTable[label] = pc
+
+			code = String(ssplit[1])
+		} else {
+			code = String(ssplit[0])
+		}
+		if code.count > 0 {
+			// split1 by whitespace for opcode & args
+			let codesplit = code.split(maxSplits: 1) { $0.isWhitespace }
+			let opcode = codesplit[0].uppercased()
+			// check opcode validity
+			if !validOpcode(opcode) {
+				err("invalid opcode '\(opcode)'", line: number)
+				abort()
+			}
+			var arg1 = ""
+			var arg2 = ""
+			// split1 args by ',' for arg1 & arg2
+			if codesplit.count == 2 {
+				let args = codesplit[1].split(separator: ",", maxSplits: 1)
+				arg1 = String(args[0]).trimmingCharacters(in: .whitespaces)
+				arg1 = arg1.uppercased()
+				if args.count == 2 {
+					arg2 = String(args[1]).trimmingCharacters(in: .whitespaces)
+					arg2 = arg2.uppercased()
+				}
+			}
+			// TODO: check arg validity ?
+			// ...
+
+			// determine addressing mode
+			let addrMode = parseAddressingMode(opcode: opcode, arg1: arg1, arg2: arg2)
+			if let amode = addrMode {
+				// parse opcode & args for size
+				let ohex = OpcodeTable.assemblerLookup[opcode]?[amode]
+				if let hex = ohex {
+					// return opcode size
+					let opc = Opcode(hex: hex, mnemonic: opcode, mode: amode)
+					return CodeLine(
+						linenum: number, offset: pc, label: label, op: opc, arg1: arg1, arg2: arg2)
+				} else {
+					err("invalid opcode or addressing mode", line: number)
+					abort()
+				}
+			} else {
+				err("invalid addressing mode in args: '\(stripped)'", line: number)
+				abort()
+			}
+		} else {
+			// label-only, no opcode or args
+			return CodeLine(linenum: number, offset: pc, label: label, op: nil, arg1: "", arg2: "")
+		}
+	}
+
+	// if input is a number, returns it as a UInt16,
+	// else returns nil
+	// NOTE: does not handle "#" prefix for immediates - caller must handle
+	public func parseNum(_ n: String) -> UInt16? {
+		// $ prefix = hex
+		if n.hasPrefix("$") {
+			return UInt16(n.trimmingPrefix("$"), radix: 16)
+		} else if n.hasPrefix("%") {
+			// % prefix = binary
+			return UInt16(n.trimmingPrefix("%"), radix: 2)
+		} else if n.hasPrefix("0") {
+			// 0 prefix = octal
+			return UInt16(n, radix: 8)
+		} else {
+			// no prefix = decimal
+			return UInt16(n)
+		}
+	}
+
+	// if input is an immediate (e.g. '#$ff'), returns it as a UInt16,
+	// else returns nil
+	public func parseImmediate(_ n: String) -> UInt8? {
+		if n[n.startIndex] == "#" {
+			if let n = parseNum(String(n.trimmingPrefix("#"))) {
+				// number
+				if n < 256 {
+					return UInt8(n)
+				}
+			} else if let n = byteForSymbol(String(n.trimmingPrefix("#"))) {
+				// symbol
+				return n
+			}
+		}
+		return nil
+	}
+
+	func validOpcode(_ opcode: String) -> Bool {
+		OpcodeTable.assemblerLookup[opcode] != nil
+	}
+
+	func validLabel(_ label: String) -> Bool {
+		if label.count == 0 {
+			return false
+		}
+		let c = label[label.startIndex]
+		// local labels only allowed inside sub-routines
+		if c == "@" {
+			if sub.count == 0 {
+				// TODO: error message?
+				// print("error: local labels only allowed in .SUB/.ENDSUB blocks")
+				return false
+			}
+		} else if !c.isLetter && c != "_" {
+			return false
+		}
+		for (i, c) in label.enumerated() {
+			if i == 0 {
+				if !c.isLetter && c != "_" && c != "@" {
+					return false
+				}
+			} else if !c.isLetter && !c.isNumber && c != "_" {
+			 	return false
+			}
+		}
+		return true
+	}
+
+	// is this symbol valid in a "RHS" context. i.e. when being referenced, not defined
+	func validSymbolRHS(_ label: String) -> Bool {
+		if label.count == 0 {
+			return false
+		}
+		let c = label[label.startIndex]
+		if !c.isLetter && c != "_" && c != "<" && c != ">" {
+			return false
+		}
+		for c in label {
+			if !c.isLetter && !c.isNumber && c != "_" && c != "<" && c != ">" {
+				return false
+			}
+		}
+		return true
+	}
+
+	func parseAddressingMode(opcode: String, arg1: String, arg2: String) -> AddressingMode? {
+		// addressing mode matching:
+
+		// no-arg instructions:
+		// implied: no args, e.g. TAX
+		if arg1.count == 0 && arg2.count == 0 {
+			return .implied
+		}
+		// single arg instructions
+		if arg2.count == 0 {
+			// accumulator: 1 arg, the A register, e.g. ASL A
+			if arg1 == "A" {
+				return .accumulator
+			}
+			// arg1 is in parentheses
+			if arg1[arg1.startIndex] == "(" && arg1.last == ")" {
+				// absolute indirect: JMP is the only op that uses this
+				if opcode == "JMP" {
+					return .indirect
+				}
+				return nil
+			}
+			// branch instruction = relative addressing
+			switch opcode {
+			case "BCC", "BCS", "BEQ", "BNE", "BMI", "BPL", "BVC", "BVS":
+				// validate symbol/number
+				if !validSymbolRHS(arg1) && parseNum(arg1) == nil {
+					return nil
+				}
+				return .relative
+			default:
+				break
+			}
+			// immediate: arg1 an immediate 8bit number, e.g. LDA #$ff
+			if parseImmediate(arg1) != nil {
+				return .immediate
+			}
+			// one arg and it's an address
+			let optn = parseNum(arg1)
+			//if parseNum(arg1) != nil {
+			if let n = optn {
+				// arg1 is 16bit address
+				if n > 255 {
+					// absolute: arg1=16bit, e.g. LDA $42ff
+					return .absolute
+				} else {
+					// zero page: 1 arg, 8 bits, e.g. LDA $ff
+					return .zeroPage
+				}
+			} else if let sym = wordForSymbol(arg1.uppercased()) {
+				// it's a symbol, look it up in the symbol table
+				// jmp instructions don't have zero-page versions
+				if opcode == "JMP" || opcode == "JSR" || sym > 255 {
+					return .absolute
+				}
+				return .zeroPage
+			} else {
+				// didn't find the symbol, assume absolute
+				// (zero-page labels cannot be forward referenced)
+				if !validLabel(arg1) {
+					return nil
+				}
+				return .absolute
+			}
+		} else {
+			// two arg instructions
+			if arg2 == "X" {
+				// symbol or number?
+				if let sym = wordForSymbol(arg1.uppercased()) {
+					// 8-bit symbols or 16-bit with </> prefix (low/high byte) should be zero-page
+					if sym < 256 { return .zeroPageX }
+					return .absoluteX
+				} else {
+					let optn = parseNum(arg1)
+					if let n = optn {
+						if n > 255 { return .absoluteX } else { return .zeroPageX }
+					}
+
+					// not a number and didn't find the symbol, assume absolute
+					// (zero page labels cannot be forward referenced)
+					if !validLabel(arg1) {
+						return nil
+					}
+					return .absoluteX
+				}
+			}
+			// indirect x (pre-indexed): 2 args in parens, e.g. LDA ($42, X)
+			if arg1[arg1.startIndex] == "(" && arg2.last == ")" {
+				let a1 = String(arg1.trimmingPrefix("("))
+				let a2 = arg2.dropLast(1)
+				if a2 != "X" { return nil }
+				if !validLabel(a1) && parseNum(a1) == nil {
+					return nil
+				}
+				return .indexedIndirect
+
+			}
+			if arg2 == "Y" {
+				// indirect y (post-indexed): 2 args, 1st in parens, e.g. LDA ($42), Y
+				// relative: only branch instructions, 1 arg 8bit or label (assembler needs to
+				//           calculate the offset of the label & error out if it is more than
+				//           +127/-128 bytes away
+				if arg1[arg1.startIndex] == "(" && arg1.last == ")" {
+					let a1 = String(arg1.trimmingPrefix("(").dropLast(1))
+					if arg2 != "Y" { return nil }
+					if !validLabel(a1) && parseNum(a1) == nil {
+						return nil
+					}
+					return .indirectIndexed
+				}
+				// symbol or number?
+				if let sym = wordForSymbol(arg1.uppercased()) {
+					// 8-bit symbols or 16-bit with </> prefix (low/high byte) should be zero-page
+					if sym < 256 { return .zeroPageY }
+					return .absoluteY
+				} else {
+					let optn = parseNum(arg1)
+					if let n = optn {
+						if n > 255 { return .absoluteY } else { return .zeroPageY }
+					}
+
+					// not a number and didn't find the symbol, assume absolute
+					// (zero page labels cannot be forward referenced)
+					if !validLabel(arg1) {
+						return nil
+					}
+					return .absoluteY
+				}
+			}
+
+			return nil  // error, could not determine addressing mode
 		}
 	}
 
@@ -479,432 +955,6 @@ public struct Chasm: ParsableCommand {
 			} else {
 				fatal("invalid symbol '\(addr)'")
 			}
-		}
-	}
-
-	// MARK: pass one methods
-
-	public mutating func parseLine(_ line: String, number: UInt16, from pc: UInt16) -> UInt16 {
-		var offset = pc
-		if line.count == 0 || line.trimmingCharacters(in: .whitespaces).count == 0 {
-			// empty line, no-op
-			return offset
-		}
-		// directive?
-		let d = directive(line, number: number, from: pc)
-		if let dir = d {
-			preprocInput.append(Line.directive(dir))
-			// if the directive changed the pc, change it
-			if let npc = dir.newPC {
-				if npc < offset {
-					err("directive cannot set org prior to current location", line: number)
-					abort()
-				}
-				offset = npc
-			}
-		} else {
-			// code line?
-			let c = code(line, number: number, from: pc)
-			if let code = c {
-				preprocInput.append(Line.code(code))
-				offset += code.byteSize
-			} else {
-				// comment-only line, no-op
-				return offset
-			}
-		}
-		return offset
-	}
-
-	// TODO: handle all directives .include, .incbin, .mac...
-	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16)
-		-> DirectiveLine?
-	{
-		// strip off comments
-		let stripped = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)[0]
-		// directive? (starts with '.' IN COLUMN 1!)
-		if !stripped.hasPrefix(".") {
-			return nil
-		}
-		let parts = stripped.split(maxSplits: 1) { $0.isWhitespace }
-		let name = String(parts[0]).trimmingCharacters(in: .whitespaces).uppercased()
-		let content = String(parts[1]).trimmingCharacters(in: .whitespaces).uppercased()
-		var npc = pc
-		// TODO: impl .include, .incbin, .mac
-		switch name.uppercased() {
-		case ".ORG":
-			// 'content' should be convertible to a hex number
-			if let n = parseNum(content) {
-				npc = n
-			} else {
-				err("invalid number '\(content)'", line: number)
-				return nil
-			}
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: npc)
-		case ".DATA":
-			// TODO: validate content ?
-			let parts = content.split { $0.isWhitespace }
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content,
-				newPC: pc + UInt16(parts.count))
-		case ".BYTE":
-			// TODO: validate content ?
-			let parts = content.split(separator: ",", maxSplits: 1)
-			var npc = pc
-			if parts.count == 2 {
-				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
-					npc += len
-				} else {
-					err("invalid .BYTE directive count: \(parts[1])", line: number)
-					abort()
-				}
-			} else {
-				npc += 1
-			}
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: npc)
-		case ".WORD":
-			// TODO: validate content ?
-			let parts = content.split(separator: ",", maxSplits: 1)
-			var npc = pc
-			if parts.count == 2 {
-				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
-					npc += len * 2
-				} else {
-					err("invalid .BYTE directive count: \(parts[1])", line: number)
-					abort()
-				}
-			} else {
-				npc += 2
-			}
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: npc)
-		case ".STRING":
-			// TODO: validate content ?
-			let len = content.count
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: pc + UInt16(len))
-		case ".DEF":
-			// parse out symbol & value from 'content'
-			let contentparts = content.split(maxSplits: 1) { $0.isWhitespace }
-			if contentparts.count != 2 {
-				err("invalid .DEF: '\(content)'", line: number)
-				abort()
-			}
-			let lhs = String(contentparts[0].trimmingCharacters(in: .whitespaces))
-			let rhs = String(contentparts[1].trimmingCharacters(in: .whitespaces))
-			if !validLabel(lhs) {
-				err("invalid .DEF symbol name: '\(lhs)'", line: number)
-				abort()
-			}
-
-			if let n = parseNum(rhs) {
-				// check for dups
-				if symbolTable[lhs] != nil {
-					err(".DEF symbol redefinition: '\(lhs)'", line: number)
-					abort()
-				}
-				// enter into symbol table
-				symbolTable[lhs] = n
-				return DirectiveLine(
-					linenum: number, offset: pc, name: name, content: "", newPC: nil)
-			} else {
-				err("invalid .DEF value: '\(rhs)'", line: number)
-				return nil
-			}
-		default:
-			return nil
-		}
-	}
-
-	public mutating func code(_ line: String, number: UInt16, from pc: UInt16) -> CodeLine? {
-		// label: opcode arg1, arg2 ; comment
-
-		// strip comments, if any
-		let stripped = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)[0]
-		if stripped.trimmingCharacters(in: .whitespaces).count == 0 {
-			return nil
-		}
-		// look for ':'
-		let ssplit = stripped.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-		var label = ""
-		var code = ""
-		if ssplit.count == 2 {
-			label = String(ssplit[0]).uppercased()
-			if !validLabel(label) {
-				err("invalid label", line: number)
-				abort()
-			}
-			// ensure col 0 is non-whitespace
-			if label[label.startIndex].isWhitespace {
-				err("labels must start in the first column", line: number)
-				abort()
-			}
-			// check for dups
-			if symbolTable[label] != nil {
-				err("symbol redefinition: '\(label)'", line: number)
-				abort()
-			}
-			// add label to symbol table with current pc
-			symbolTable[label] = pc
-
-			code = String(ssplit[1])
-		} else {
-			code = String(ssplit[0])
-		}
-		if code.count > 0 {
-			// split1 by whitespace for opcode & args
-			let codesplit = code.split(maxSplits: 1) { $0.isWhitespace }
-			let opcode = codesplit[0].uppercased()
-			// check opcode validity
-			if !validOpcode(opcode) {
-				err("invalid opcode '\(opcode)'", line: number)
-				abort()
-			}
-			var arg1 = ""
-			var arg2 = ""
-			// split1 args by ',' for arg1 & arg2
-			if codesplit.count == 2 {
-				let args = codesplit[1].split(separator: ",", maxSplits: 1)
-				arg1 = String(args[0]).trimmingCharacters(in: .whitespaces)
-				arg1 = arg1.uppercased()
-				if args.count == 2 {
-					arg2 = String(args[1]).trimmingCharacters(in: .whitespaces)
-					arg2 = arg2.uppercased()
-				}
-			}
-			// TODO: check arg validity ?
-			// ...
-
-			// determine addressing mode
-			let addrMode = parseAddressingMode(opcode: opcode, arg1: arg1, arg2: arg2)
-			if let amode = addrMode {
-				// parse opcode & args for size
-				let ohex = OpcodeTable.assemblerLookup[opcode]?[amode]
-				if let hex = ohex {
-					// return opcode size
-					let opc = Opcode(hex: hex, mnemonic: opcode, mode: amode)
-					return CodeLine(
-						linenum: number, offset: pc, label: label, op: opc, arg1: arg1, arg2: arg2)
-				} else {
-					err("invalid opcode or addressing mode", line: number)
-					abort()
-				}
-			} else {
-				err("invalid addressing mode in args: '\(stripped)'", line: number)
-				abort()
-			}
-		} else {
-			// label-only, no opcode or args
-			return CodeLine(linenum: number, offset: pc, label: label, op: nil, arg1: "", arg2: "")
-		}
-	}
-
-	// if input is a number, returns it as a UInt16,
-	// else returns nil
-	// NOTE: does not handle "#" prefix for immediates - caller must handle
-	public func parseNum(_ n: String) -> UInt16? {
-		// $ prefix = hex
-		if n.hasPrefix("$") {
-			return UInt16(n.trimmingPrefix("$"), radix: 16)
-		} else if n.hasPrefix("%") {
-			// % prefix = binary
-			return UInt16(n.trimmingPrefix("%"), radix: 2)
-		} else if n.hasPrefix("0") {
-			// 0 prefix = octal
-			return UInt16(n, radix: 8)
-		} else {
-			// no prefix = decimal
-			return UInt16(n)
-		}
-	}
-
-	// if input is an immediate (e.g. '#$ff'), returns it as a UInt16,
-	// else returns nil
-	public func parseImmediate(_ n: String) -> UInt8? {
-		if n[n.startIndex] == "#" {
-			if let n = parseNum(String(n.trimmingPrefix("#"))) {
-				// number
-				if n < 256 {
-					return UInt8(n)
-				}
-			} else if let n = byteForSymbol(String(n.trimmingPrefix("#"))) {
-				// symbol
-				return n
-			}
-		}
-		return nil
-	}
-
-	func validOpcode(_ opcode: String) -> Bool {
-		OpcodeTable.assemblerLookup[opcode] != nil
-	}
-
-	func validLabel(_ label: String) -> Bool {
-		if label.count == 0 {
-			return false
-		}
-		let c = label[label.startIndex]
-		if !c.isLetter && c != "_" {
-			return false
-		}
-		for c in label {
-			if !c.isLetter && !c.isNumber && c != "_" {
-				return false
-			}
-		}
-		return true
-	}
-
-	// is this symbol valid in a "RHS" context. i.e. when being referenced, not defined
-	func validSymbolRHS(_ label: String) -> Bool {
-		if label.count == 0 {
-			return false
-		}
-		let c = label[label.startIndex]
-		if !c.isLetter && c != "_" && c != "<" && c != ">" {
-			return false
-		}
-		for c in label {
-			if !c.isLetter && !c.isNumber && c != "_" && c != "<" && c != ">" {
-				return false
-			}
-		}
-		return true
-	}
-
-	func parseAddressingMode(opcode: String, arg1: String, arg2: String) -> AddressingMode? {
-		// addressing mode matching:
-
-		// no-arg instructions:
-		// implied: no args, e.g. TAX
-		if arg1.count == 0 && arg2.count == 0 {
-			return .implied
-		}
-		// single arg instructions
-		if arg2.count == 0 {
-			// accumulator: 1 arg, the A register, e.g. ASL A
-			if arg1 == "A" {
-				return .accumulator
-			}
-			// arg1 is in parentheses
-			if arg1[arg1.startIndex] == "(" && arg1.last == ")" {
-				// absolute indirect: JMP is the only op that uses this
-				if opcode == "JMP" {
-					return .indirect
-				}
-				return nil
-			}
-			// branch instruction = relative addressing
-			switch opcode {
-			case "BCC", "BCS", "BEQ", "BNE", "BMI", "BPL", "BVC", "BVS":
-				// validate symbol/number
-				if !validSymbolRHS(arg1) && parseNum(arg1) == nil {
-					return nil
-				}
-				return .relative
-			default:
-				break
-			}
-			// immediate: arg1 an immediate 8bit number, e.g. LDA #$ff
-			if parseImmediate(arg1) != nil {
-				return .immediate
-			}
-			// one arg and it's an address
-			let optn = parseNum(arg1)
-			//if parseNum(arg1) != nil {
-			if let n = optn {
-				// arg1 is 16bit address
-				if n > 255 {
-					// absolute: arg1=16bit, e.g. LDA $42ff
-					return .absolute
-				} else {
-					// zero page: 1 arg, 8 bits, e.g. LDA $ff
-					return .zeroPage
-				}
-			} else if let sym = wordForSymbol(arg1.uppercased()) {
-				// it's a symbol, look it up in the symbol table
-				// jmp instructions don't have zero-page versions
-				if opcode == "JMP" || opcode == "JSR" || sym > 255 {
-					return .absolute
-				}
-				return .zeroPage
-			} else {
-				// didn't find the symbol, assume absolute
-				// (zero-page labels cannot be forward referenced)
-				if !validLabel(arg1) {
-					return nil
-				}
-				return .absolute
-			}
-		} else {
-			// two arg instructions
-			if arg2 == "X" {
-				// symbol or number?
-				if let sym = wordForSymbol(arg1.uppercased()) {
-					// 8-bit symbols or 16-bit with </> prefix (low/high byte) should be zero-page
-					if sym < 256 { return .zeroPageX }
-					return .absoluteX
-				} else {
-					let optn = parseNum(arg1)
-					if let n = optn {
-						if n > 255 { return .absoluteX } else { return .zeroPageX }
-					}
-
-					// not a number and didn't find the symbol, assume absolute
-					// (zero page labels cannot be forward referenced)
-					if !validLabel(arg1) {
-						return nil
-					}
-					return .absoluteX
-				}
-			}
-			// indirect x (pre-indexed): 2 args in parens, e.g. LDA ($42, X)
-			if arg1[arg1.startIndex] == "(" && arg2.last == ")" {
-				let a1 = String(arg1.trimmingPrefix("("))
-				let a2 = arg2.dropLast(1)
-				if a2 != "X" { return nil }
-				if !validLabel(a1) && parseNum(a1) == nil {
-					return nil
-				}
-				return .indexedIndirect
-
-			}
-			if arg2 == "Y" {
-				// indirect y (post-indexed): 2 args, 1st in parens, e.g. LDA ($42), Y
-				// relative: only branch instructions, 1 arg 8bit or label (assembler needs to
-				//           calculate the offset of the label & error out if it is more than
-				//           +127/-128 bytes away
-				if arg1[arg1.startIndex] == "(" && arg1.last == ")" {
-					let a1 = String(arg1.trimmingPrefix("(").dropLast(1))
-					if arg2 != "Y" { return nil }
-					if !validLabel(a1) && parseNum(a1) == nil {
-						return nil
-					}
-					return .indirectIndexed
-				}
-				// symbol or number?
-				if let sym = wordForSymbol(arg1.uppercased()) {
-					// 8-bit symbols or 16-bit with </> prefix (low/high byte) should be zero-page
-					if sym < 256 { return .zeroPageY }
-					return .absoluteY
-				} else {
-					let optn = parseNum(arg1)
-					if let n = optn {
-						if n > 255 { return .absoluteY } else { return .zeroPageY }
-					}
-
-					// not a number and didn't find the symbol, assume absolute
-					// (zero page labels cannot be forward referenced)
-					if !validLabel(arg1) {
-						return nil
-					}
-					return .absoluteY
-				}
-			}
-
-			return nil  // error, could not determine addressing mode
 		}
 	}
 
