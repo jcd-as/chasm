@@ -6,10 +6,8 @@
 //
 // TODO:
 // P1
-// * directives: .data, .string, .word, .include, .incbin...
-// * pre-processing (defs/equs, macros)
-//   (should we just use the C preproc? e.g. 'clang -E -P -x assembler-with-cpp test.chasm -o test.pp')
 // * sub-routines (local labels/symbols)
+// * directives: .include, .incbin, macros (.mac)
 // P2
 // * support basic math on symbols (esp +[offset])
 // * error handling - better error messages from closer to failure site
@@ -90,7 +88,6 @@ public struct Chasm: ParsableCommand {
 		// TODO: impl:
 		// - (optional?) pre-process:
 		//   - expand macros
-		//   - defs/equs
 		//preprocess(lines)
 
 		// first pass, scan line by line, tracking:
@@ -209,8 +206,7 @@ public struct Chasm: ParsableCommand {
 	}
 
 	public mutating func generateForDirective(_ line: DirectiveLine, from: inout UInt16) {
-		// TODO: impl all directives
-		// .data, .string, .word, .include, .incbin...
+		// TODO: impl all directives: .mac, .include, .incbin...
 		// if a new pc (address) was set, use it
 		if let newpc = line.newPC {
 			let len = Int(newpc) - Int(from)
@@ -520,8 +516,7 @@ public struct Chasm: ParsableCommand {
 		return offset
 	}
 
-	// TODO: handle all directives
-	// .data, .string, .word, .include, .incbin...
+	// TODO: handle all directives .include, .incbin, .mac...
 	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16)
 		-> DirectiveLine?
 	{
@@ -535,8 +530,7 @@ public struct Chasm: ParsableCommand {
 		let name = String(parts[0]).trimmingCharacters(in: .whitespaces).uppercased()
 		let content = String(parts[1]).trimmingCharacters(in: .whitespaces).uppercased()
 		var npc = pc
-		// TODO: impl
-		// .org, .def, .data, .string, .byte, .word, .include, .incbin...
+		// TODO: impl .include, .incbin, .mac
 		switch name.uppercased() {
 		case ".ORG":
 			// 'content' should be convertible to a hex number
