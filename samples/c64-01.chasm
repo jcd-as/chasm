@@ -1,4 +1,5 @@
-;;; C-64 program, installed at $4000, flashes border during the raster interrupt
+;;; C-64 program, installed at $0801, includes BASIC bytes to jump to our asm code
+;;; flashes border during the raster interrupt
 .def CTRL1  		$d011
 .def RASTER 		$d012
 .def IRQ_MSK		$d019
@@ -8,11 +9,15 @@
 .def IRQ_VEC_LOW	$0314
 .def IRQ_VEC_HIGH	$0315
 
-.org $4000
+; place this code at $0801
+.org $0801
+; that runs the BASIC SYS(2064) command to start our assembly code
+.data $0c $08 $0a $00 $9e $32 $30 $36 $34 $00 $00 $00 $00 $00 $00
+; addr is now $8010 (2064), which is where basic will start executing
 
 jmp setupIRQ
 
-; addr here is $4000 + 3 (sizeof jmp)
+; addr here is $0801 + 3 (sizeof jmp)
 customIRQ:
 
 ; ack the int

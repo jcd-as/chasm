@@ -20,7 +20,6 @@
 import ArgumentParser
 import Foundation
 
-
 public struct CodeLine: Decodable {
 	let linenum: UInt16  // line number (from the original text!)
 	var offset: UInt16  // byte offset to this line
@@ -54,7 +53,6 @@ public func lowByte(_ word: UInt16) -> UInt8 {
 	return UInt8(word & 0xFF)
 }
 
-
 @main
 public struct Chasm: ParsableCommand {
 	// the symbol table tracking labels/defs and their addresses
@@ -66,7 +64,7 @@ public struct Chasm: ParsableCommand {
 
 	// explicit public init is needed
 	public init() {
-		buf.reserveCapacity(64*1024)
+		buf.reserveCapacity(64 * 1024)
 	}
 
 	@Argument(help: "input .chasm filename")
@@ -213,29 +211,35 @@ public struct Chasm: ParsableCommand {
 	public mutating func generateForDirective(_ line: DirectiveLine, from: inout UInt16) {
 		// TODO: impl all directives
 		// .data, .string, .word, .include, .incbin...
+		// if a new pc (address) was set, use it
+		if let newpc = line.newPC {
+			let len = Int(newpc) - Int(from)
+			if len < 0 {
+				err("invalid \(line.name) directive", line: line.linenum)
+				abort()
+			}
+			from = newpc
+		} else {
+			// TODO: .defs and macros don't change the address (PC)...
+			if line.name != ".DEF" {
+				err("invalid \(line.name) directive", line: line.linenum)
+				abort()
+			}
+		}
 		switch line.name {
 		case ".DEF":
 			break
 		case ".ORG":
-			if let newpc = line.newPC {
-				let len = Int(newpc) - Int(from)
-				if len < 0 {
-					err("invalid .ORG directive", line: line.linenum)
-					abort()
-				}
-			} else {
-				err("invalid .ORG directive", line: line.linenum)
-				abort()
-			}
+			break
 		case ".DATA":
 			// .DATA $ea $ff $01 $00 $ea ; generates the literal bytes ea ff 01 00 ea
 			let parts = line.content.split { $0.isWhitespace }
 			for part in parts {
 				if let val = parseNum(String(part.trimmingCharacters(in: .whitespaces))) {
-				if val > 255 {
-					err(".BYTE directive value >255: \(parts[0])", line: line.linenum)
-					abort()
-				}
+					if val > 255 {
+						err(".DATA directive value >255: \(parts[0])", line: line.linenum)
+						abort()
+					}
 					buf.append(UInt8(val))
 				}
 			}
@@ -252,12 +256,13 @@ public struct Chasm: ParsableCommand {
 						// fill from current position with 'val'
 						for _ in 0..<len {
 							buf.append(UInt8(val))
-							from += 1
 						}
 					} else {
 						err("invalid .BYTE directive count: \(parts[1])", line: line.linenum)
 						abort()
 					}
+				} else {
+					buf.append(UInt8(val))
 				}
 			} else {
 				err("invalid .BYTE directive value: \(parts[0])", line: line.linenum)
@@ -274,12 +279,16 @@ public struct Chasm: ParsableCommand {
 							let high = highByte(val)
 							buf.append(low)
 							buf.append(high)
-							from += 2
 						}
 					} else {
 						err("invalid .WORD directive count: \(parts[1])", line: line.linenum)
 						abort()
 					}
+				} else {
+					let low = lowByte(val)
+					let high = highByte(val)
+					buf.append(low)
+					buf.append(high)
 				}
 			} else {
 				err("invalid .WORD directive value: \(parts[0])", line: line.linenum)
@@ -295,9 +304,10 @@ public struct Chasm: ParsableCommand {
 			for c in line.content.trimmingCharacters(in: CharacterSet(charactersIn: "\"")) {
 				if let ascii = c.asciiValue {
 					buf.append(ascii)
-					from += 1
 				} else {
-					err("invalid .STRING directive value, non-ascii characters: \(line.content)", line: line.linenum)
+					err(
+						"invalid .STRING directive value, non-ascii characters: \(line.content)",
+						line: line.linenum)
 				}
 			}
 			break
@@ -382,10 +392,11 @@ public struct Chasm: ParsableCommand {
 		}
 		fatal("invalid immediate value: '\(immed)'")
 	}
-	
+
 	// get a word for a symbol, respecting </> operators
 	func wordForSymbol(_ sym: String) -> UInt16? {
-		var getLow: Bool = false, getHigh: Bool = false
+		var getLow: Bool = false
+		var getHigh: Bool = false
 		var s: String
 		if sym.first == "<" {
 			getLow = true
@@ -411,11 +422,12 @@ public struct Chasm: ParsableCommand {
 		}
 	}
 
-	// get a byte for a symbol, respecting </> operators and 
+	// get a byte for a symbol, respecting </> operators and
 	// checking to make sure a symbol is < 256
 	// (used, for instance, by the branch instructions)
 	func byteForSymbol(_ sym: String) -> UInt8? {
-		var getLow: Bool = false, getHigh: Bool = false
+		var getLow: Bool = false
+		var getHigh: Bool = false
 		var s: String
 		if sym.first == "<" {
 			getLow = true
@@ -426,7 +438,7 @@ public struct Chasm: ParsableCommand {
 		} else {
 			s = sym
 		}
-			
+
 		let optn = symbolTable[s]
 		if let n = optn {
 			if getLow {
@@ -434,8 +446,7 @@ public struct Chasm: ParsableCommand {
 			} else if getHigh {
 				return highByte(n)
 			} else {
-				if n < 256 { return UInt8(n) }
-				else { return nil }
+				if n < 256 { return UInt8(n) } else { return nil }
 			}
 		} else {
 			return nil
@@ -539,20 +550,47 @@ public struct Chasm: ParsableCommand {
 				linenum: number, offset: pc, name: name, content: content, newPC: npc)
 		case ".DATA":
 			// TODO: validate content ?
+			let parts = content.split { $0.isWhitespace }
 			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: nil)
+				linenum: number, offset: pc, name: name, content: content,
+				newPC: pc + UInt16(parts.count))
 		case ".BYTE":
 			// TODO: validate content ?
+			let parts = content.split(separator: ",", maxSplits: 1)
+			var npc = pc
+			if parts.count == 2 {
+				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
+					npc += len
+				} else {
+					err("invalid .BYTE directive count: \(parts[1])", line: number)
+					abort()
+				}
+			} else {
+				npc += 1
+			}
 			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: nil)
+				linenum: number, offset: pc, name: name, content: content, newPC: npc)
 		case ".WORD":
 			// TODO: validate content ?
+			let parts = content.split(separator: ",", maxSplits: 1)
+			var npc = pc
+			if parts.count == 2 {
+				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
+					npc += len * 2
+				} else {
+					err("invalid .BYTE directive count: \(parts[1])", line: number)
+					abort()
+				}
+			} else {
+				npc += 2
+			}
 			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: nil)
+				linenum: number, offset: pc, name: name, content: content, newPC: npc)
 		case ".STRING":
 			// TODO: validate content ?
+			let len = content.count
 			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: nil)
+				linenum: number, offset: pc, name: name, content: content, newPC: pc + UInt16(len))
 		case ".DEF":
 			// parse out symbol & value from 'content'
 			let contentparts = content.split(maxSplits: 1) { $0.isWhitespace }
@@ -575,7 +613,8 @@ public struct Chasm: ParsableCommand {
 				}
 				// enter into symbol table
 				symbolTable[lhs] = n
-				return DirectiveLine(linenum: number, offset: pc, name: name, content: "", newPC: nil)
+				return DirectiveLine(
+					linenum: number, offset: pc, name: name, content: "", newPC: nil)
 			} else {
 				err("invalid .DEF value: '\(rhs)'", line: number)
 				return nil
@@ -723,7 +762,7 @@ public struct Chasm: ParsableCommand {
 		}
 		return true
 	}
-	
+
 	// is this symbol valid in a "RHS" context. i.e. when being referenced, not defined
 	func validSymbolRHS(_ label: String) -> Bool {
 		if label.count == 0 {
@@ -790,8 +829,7 @@ public struct Chasm: ParsableCommand {
 					// zero page: 1 arg, 8 bits, e.g. LDA $ff
 					return .zeroPage
 				}
-			}
-			else if let sym = wordForSymbol(arg1.uppercased()) {
+			} else if let sym = wordForSymbol(arg1.uppercased()) {
 				// it's a symbol, look it up in the symbol table
 				// jmp instructions don't have zero-page versions
 				if opcode == "JMP" || opcode == "JSR" || sym > 255 {
