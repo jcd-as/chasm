@@ -14,8 +14,8 @@
             filePath = "chasmTest/chasmTest.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "32"
-            endingLineNumber = "32"
+            startingLineNumber = "37"
+            endingLineNumber = "37"
             landmarkName = "directiveTest()"
             landmarkType = "7">
          </BreakpointContent>
@@ -30,8 +30,8 @@
             filePath = "chasmTest/chasmTest.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "568"
-            endingLineNumber = "568"
+            startingLineNumber = "641"
+            endingLineNumber = "641"
             landmarkName = "passTwoTest02()"
             landmarkType = "7">
          </BreakpointContent>
@@ -64,7 +64,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "591"
             endingLineNumber = "591"
-            landmarkName = "code(_:number:from:)"
+            landmarkName = "parseAddressingMode(opcode:arg1:arg2:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

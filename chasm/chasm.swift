@@ -6,7 +6,7 @@
 //
 // TODO:
 // P1
-// * directives: .include, .incbin, 
+// * directives: .incbin
 // * macros: .mac/.endmac - all enclosed labels must be local
 // P2
 // * support basic math on symbols (esp +[offset])
@@ -60,6 +60,9 @@ public struct Chasm: ParsableCommand {
 	// the buffer to write the binary output of pass two
 	var buf = ContiguousArray<UInt8>()
 
+	// the lines read from the input file
+	var lines: [String] = []
+
 	// flag to indicate we are currently parsing a sub-routine
 	// (contains the sub-routine name)
 	var sub = ""
@@ -89,7 +92,7 @@ public struct Chasm: ParsableCommand {
 		// read the input file
 		let fileURL = URL(fileURLWithPath: input)
 		let content = try String(contentsOf: fileURL, encoding: .utf8)
-		let lines = content.components(separatedBy: .newlines)
+		lines = content.components(separatedBy: .newlines)
 
 		// TODO: impl:
 		// - (optional?) pre-process:
@@ -102,7 +105,7 @@ public struct Chasm: ParsableCommand {
 		//  - track current memory address
 		//  - enter new labels (addresses) into symbol table, look up referenced labels
 		//  - (leaves forward references for jmp/jsr/branch)
-		passOne(lines)
+		passOne()
 
 		// second pass, re-read w/ completed symbol table:
 		//  - resolve forward referenced labels
@@ -183,12 +186,16 @@ public struct Chasm: ParsableCommand {
 
 	// MARK: passes
 
-	// passOne takes the input as an array of strings (lines), and returns a symbol table.
-	public mutating func passOne(_ lines: [String]) {
+	// passOne parses the input in 'lines' and returns a symbol table.
+	// NOTE: passOne may mutate lines (on an .INCLUDE directive, for example)
+	public mutating func passOne() {
 		// program counter to track current offset
 		var pc: UInt16 = 0
-		for (linenum, line) in lines.enumerated() {
+		var linenum = 0
+		while linenum < lines.count {
+			let line = lines[linenum]
 			pc = parseLine(line, number: UInt16(linenum), from: pc)
+			linenum += 1
 		}
 	}
 
@@ -234,7 +241,7 @@ public struct Chasm: ParsableCommand {
 		return offset
 	}
 
-	// TODO: handle all directives .include, .incbin, .mac...
+	// TODO: handle all directives .incbin, .mac...
 	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16)
 		-> DirectiveLine?
 	{
@@ -248,8 +255,26 @@ public struct Chasm: ParsableCommand {
 		let name = String(parts[0]).trimmingCharacters(in: .whitespaces).uppercased()
 		let content = parts.count < 2 ? "" : String(parts[1]).trimmingCharacters(in: .whitespaces).uppercased()
 		var npc = pc
-		// TODO: impl .include, .incbin, .mac
-		switch name.uppercased() {
+		// TODO: impl .incbin, .mac
+		switch name {
+		case ".INCLUDE":
+			if parts.count != 2 {
+				err("missing filename in .INCLUDE directive", line: number)
+				abort()
+			}
+			let fname = String(parts[1]).trimmingCharacters(in: .whitespaces)
+			let fileURL = URL(fileURLWithPath: fname)
+			var filecontents: String
+			do {
+				filecontents = try String(contentsOf: fileURL, encoding: .utf8)
+			} catch {
+				err("invalid .INCLUDE file: '\(fname)'", line: number)
+				abort()
+			}
+			let inclines = filecontents.components(separatedBy: .newlines)
+			lines.insert(contentsOf: inclines, at: Int(number+1))
+			return DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc)
 		case ".SUB":
 			// 'content' should be a valid label
 			if !content.hasSuffix(":") {
@@ -385,8 +410,7 @@ public struct Chasm: ParsableCommand {
 				err("labels must start in the first column", line: number)
 				abort()
 			}
-			// TODO: if we're in a sub we need to check for local labels
-			//       and prepend the sub name to them
+			// if we're in a sub we need to check for local labels and prepend the sub name to them
 			if sub.count > 0 {
 				if label.first == "@" {
 					label = "\(sub)\(label)"

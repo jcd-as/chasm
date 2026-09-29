@@ -29,9 +29,15 @@ struct chasmTest {
         let args = [fnurl.path()]
         let cmd = try Chasm.parseAsRoot(args)
         var chasmcmd = try #require(cmd as? Chasm)
+        
+        let testFileURL = URL(fileURLWithPath: #filePath)
+        let testDirectory = testFileURL.deletingLastPathComponent()
+        let success = chdir(testDirectory.path)
+        
         try chasmcmd.run()
 
-        #expect(chasmcmd.preprocInput.count == 3)
+        #expect(chasmcmd.preprocInput.count == 10)
+        
         switch chasmcmd.preprocInput[0] {
         case .directive(let directive):
             #expect(directive.name == ".ORG")
@@ -55,6 +61,73 @@ struct chasmTest {
             #expect(directive.name == ".ENDSUB")
             #expect(directive.content == "")
             #expect(directive.newPC == 4096)
+        case .code:
+            #expect(Bool(false))
+        }
+        
+        switch chasmcmd.preprocInput[3] {
+        case .directive(let directive):
+            #expect(directive.name == ".INCLUDE")
+            #expect(directive.content == "INCTEST.CHASM")
+            #expect(directive.newPC == 4096)
+        case .code:
+            #expect(Bool(false))
+        }
+        
+        //;.def FOO $100
+        switch chasmcmd.preprocInput[4] {
+        case .directive(let directive):
+            #expect(directive.name == ".DEF")
+            #expect(directive.content == "")
+            #expect(directive.newPC == nil)
+        case .code:
+            #expect(Bool(false))
+        }
+        
+        //;.sub fcn:
+        switch chasmcmd.preprocInput[5] {
+        case .directive(let directive):
+            #expect(directive.name == ".SUB")
+            #expect(directive.content == "FCN:")
+            #expect(directive.newPC == 4096)
+        case .code:
+            #expect(Bool(false))
+        }
+        
+        //;nop
+        switch chasmcmd.preprocInput[6] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let c):
+            #expect(c.op?.mnemonic == "NOP")
+            #expect(c.offset == 4096)
+        }
+        
+        //;@local:
+        switch chasmcmd.preprocInput[7] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let c):
+            #expect(c.op?.mnemonic == nil)
+            #expect(c.label == "FCN@LOCAL")
+            #expect(c.offset == 4097)
+        }
+        
+        //;rts
+        switch chasmcmd.preprocInput[8] {
+        case .directive:
+            #expect(Bool(false))
+        case .code(let c):
+            #expect(c.op?.mnemonic == "RTS")
+            #expect(c.offset == 4097)
+        }
+        
+        //;.endsub
+        switch chasmcmd.preprocInput[9] {
+        case .directive(let directive):
+            #expect(directive.name == ".ENDSUB")
+            #expect(directive.content == "")
+            #expect(directive.newPC == 4098)
         case .code:
             #expect(Bool(false))
         }

@@ -1,0 +1,8 @@
+
+; stuff to be included
+.def MyFoo $100
+.sub fcn:
+nop
+@local:
+rts
+.endsub

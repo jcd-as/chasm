@@ -1,3 +1,11 @@
 .org $1000
 .sub foo:
 .endsub
+.include inctest.chasm
+; stuff included:
+;.def MyFoo $100
+;.sub fcn:
+;nop
+;@local:
+;rts
+;.endsub
