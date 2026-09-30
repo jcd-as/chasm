@@ -36,7 +36,7 @@ struct chasmTest {
         
         try chasmcmd.run()
 
-        #expect(chasmcmd.preprocInput.count == 10)
+        #expect(chasmcmd.preprocInput.count == 12)
         
         switch chasmcmd.preprocInput[0] {
         case .directive(let directive):
@@ -44,6 +44,8 @@ struct chasmTest {
             #expect(directive.content == "$1000")
             #expect(directive.newPC == 4096)
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
 
@@ -53,6 +55,8 @@ struct chasmTest {
             #expect(directive.content == "FOO:")
             #expect(directive.newPC == 4096)
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
 
@@ -62,6 +66,8 @@ struct chasmTest {
             #expect(directive.content == "")
             #expect(directive.newPC == 4096)
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         
@@ -71,6 +77,8 @@ struct chasmTest {
             #expect(directive.content == "INCTEST.CHASM")
             #expect(directive.newPC == 4096)
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         
@@ -81,6 +89,8 @@ struct chasmTest {
             #expect(directive.content == "")
             #expect(directive.newPC == nil)
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         
@@ -91,12 +101,16 @@ struct chasmTest {
             #expect(directive.content == "FCN:")
             #expect(directive.newPC == 4096)
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         
         //;nop
         switch chasmcmd.preprocInput[6] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.op?.mnemonic == "NOP")
@@ -106,6 +120,8 @@ struct chasmTest {
         //;@local:
         switch chasmcmd.preprocInput[7] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.op?.mnemonic == nil)
@@ -116,6 +132,8 @@ struct chasmTest {
         //;rts
         switch chasmcmd.preprocInput[8] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.op?.mnemonic == "RTS")
@@ -129,8 +147,15 @@ struct chasmTest {
             #expect(directive.content == "")
             #expect(directive.newPC == 4098)
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
+
+        //.mac mymacro definition
+        #expect(chasmcmd.macros["MYMACRO"]?.count == 2)
+        #expect(chasmcmd.macros["MYMACRO"]?[0] == "lda #$ea")
+        #expect(chasmcmd.macros["MYMACRO"]?[1] == "adc #$ae")
     }
 
     @Test func opcodesTest() async throws {
@@ -147,6 +172,8 @@ struct chasmTest {
         // line 1 (lea $42)
         switch chasmcmd.preprocInput[0] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -158,6 +185,8 @@ struct chasmTest {
         // line 2 (lea $43 ; comment)
         switch chasmcmd.preprocInput[1] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -169,6 +198,8 @@ struct chasmTest {
         // line 3 (lab1:    lea $44)
         switch chasmcmd.preprocInput[2] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -181,6 +212,8 @@ struct chasmTest {
         // line 4 (lab1:    lea $45     ; comment)
         switch chasmcmd.preprocInput[3] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -198,6 +231,8 @@ struct chasmTest {
         // line 8 (tax             ; implied)
         switch chasmcmd.preprocInput[4] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "TAX")
@@ -209,6 +244,8 @@ struct chasmTest {
         // line 9 (asl a           ; accumulator)
         switch chasmcmd.preprocInput[5] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "ASL")
@@ -220,6 +257,8 @@ struct chasmTest {
         // line 10 (lda #$ff        ; immediate)
         switch chasmcmd.preprocInput[6] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -231,6 +270,8 @@ struct chasmTest {
         //line 11 (LDA $42, x      ; zero-page,x)
         switch chasmcmd.preprocInput[7] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -242,6 +283,8 @@ struct chasmTest {
         // line 12 (ldx $42, Y      ; zero-page,y)
         switch chasmcmd.preprocInput[8] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDX")
@@ -255,6 +298,8 @@ struct chasmTest {
         // line 14 (jmp ($fffe)      ; (absolute) indirect)
         switch chasmcmd.preprocInput[9] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "JMP")
@@ -269,6 +314,8 @@ struct chasmTest {
         // line 16 (JMP lab2       ; absolute, handle labels)
         switch chasmcmd.preprocInput[10] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "JMP")
@@ -281,6 +328,8 @@ struct chasmTest {
         // line 17 (lda ($20, X)    ; indexed indirect)
         switch chasmcmd.preprocInput[11] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -293,6 +342,8 @@ struct chasmTest {
         // line 18 (lda ($20), Y    ; indirect indexed)
         switch chasmcmd.preprocInput[12] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -305,6 +356,8 @@ struct chasmTest {
         // line 19 (lda $4200       ; absolute)
         switch chasmcmd.preprocInput[13] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -317,6 +370,8 @@ struct chasmTest {
         // line 20 (lda $4200, x    ; absolute x)
         switch chasmcmd.preprocInput[14] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -328,6 +383,8 @@ struct chasmTest {
         // line 21 (lda $4200, y    ; absolute y)
         switch chasmcmd.preprocInput[15] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -340,6 +397,8 @@ struct chasmTest {
         // line 22 (BEQ lab1       ; TBD - relative, handle labels)
         switch chasmcmd.preprocInput[16] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "BEQ")
@@ -352,6 +411,8 @@ struct chasmTest {
         // line 23 (BCS $80       ; relative)
         switch chasmcmd.preprocInput[17] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "BCS")
@@ -364,6 +425,8 @@ struct chasmTest {
         // line 24 (lda not_yet_declared, x)
         switch chasmcmd.preprocInput[18] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -376,6 +439,8 @@ struct chasmTest {
         // line 25 (lda also_not_yet_declared, y)
         switch chasmcmd.preprocInput[19] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -388,6 +453,8 @@ struct chasmTest {
         // line 26 - not_yet_declared:
         switch chasmcmd.preprocInput[20] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.linenum == 25)
@@ -401,6 +468,8 @@ struct chasmTest {
         // line 27 - not_yet_declared:
         switch chasmcmd.preprocInput[21] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.linenum == 26)
@@ -414,6 +483,8 @@ struct chasmTest {
         // line 29 - jmp (lab1)
         switch chasmcmd.preprocInput[22] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "JMP")
@@ -426,6 +497,8 @@ struct chasmTest {
         // line 30 - lda <ALSO_NOT_YET_DECLARED      ; low-byte of label
         switch chasmcmd.preprocInput[23] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -438,6 +511,8 @@ struct chasmTest {
         // line 31 - lda >ALSO_NOT_YET_DECLARED      ; high-byte of label
         switch chasmcmd.preprocInput[24] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -450,6 +525,8 @@ struct chasmTest {
         // line 32 - lda #<ALSO_NOT_YET_DECLARED      ; low-byte of label
         switch chasmcmd.preprocInput[25] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -462,6 +539,8 @@ struct chasmTest {
         // line 33 - lda #>ALSO_NOT_YET_DECLARED      ; high-byte of label
         switch chasmcmd.preprocInput[26] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDA")
@@ -474,6 +553,8 @@ struct chasmTest {
         // line 34 - ldx <not_yet_declared, y
         switch chasmcmd.preprocInput[27] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDX")
@@ -486,6 +567,8 @@ struct chasmTest {
         // line 35 - ldx >not_yet_declared, y
         switch chasmcmd.preprocInput[28] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let code):
             #expect(code.op!.mnemonic == "LDX")
@@ -512,6 +595,8 @@ struct chasmTest {
             #expect(d.name == ".ORG")
             #expect(d.content == "$0000")
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         // line 2 - BYTE
@@ -521,11 +606,15 @@ struct chasmTest {
             #expect(d.name == ".BYTE")
             #expect(d.content == "$00, $100")
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         // line 3 - cli
         switch chasmcmd.preprocInput[2] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.linenum == 3)
@@ -539,6 +628,8 @@ struct chasmTest {
         // line 4 - loop:   lda #$ea
         switch chasmcmd.preprocInput[3] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.linenum == 4)
@@ -552,6 +643,8 @@ struct chasmTest {
         // line 5 - ldx #255
         switch chasmcmd.preprocInput[4] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.linenum == 5)
@@ -565,6 +658,8 @@ struct chasmTest {
         // line 6 - sta $00, x
         switch chasmcmd.preprocInput[5] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.linenum == 6)
@@ -578,6 +673,8 @@ struct chasmTest {
         // line 7 - cpx #0
         switch chasmcmd.preprocInput[6] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.linenum == 7)
@@ -591,6 +688,8 @@ struct chasmTest {
         // line 8 - BnE loop
         switch chasmcmd.preprocInput[7] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.linenum == 8)
@@ -604,6 +703,8 @@ struct chasmTest {
         // line 9 - BRK
         switch chasmcmd.preprocInput[8] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.linenum == 9)
@@ -678,6 +779,8 @@ struct chasmTest {
             #expect(d.name == ".ORG")
             #expect(d.content == "$1000")
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
 
@@ -688,6 +791,8 @@ struct chasmTest {
             #expect(d.name == ".BYTE")
             #expect(d.content == "$EA, $10")
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         #expect(chasmcmd.buf[0] == 0xea)
@@ -701,6 +806,8 @@ struct chasmTest {
             #expect(d.name == ".WORD")
             #expect(d.content == "$FEED, $03")
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         #expect(chasmcmd.buf[16] == 0xed)
@@ -717,6 +824,8 @@ struct chasmTest {
             #expect(d.name == ".DATA")
             #expect(d.content == "$0F $1E $2D $3C $4B $5A $69 $78 $87 $96 $A5 $B4 $C3 $D2 $E1 $F0")
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         }
         #expect(chasmcmd.buf[22] == 0x0f)
@@ -743,14 +852,17 @@ struct chasmTest {
             #expect(d.name == ".STRING")
             #expect(d.content == "\"FOOBAR\"")
         case .code:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
-            #expect(chasmcmd.buf[38] == 70)
-            #expect(chasmcmd.buf[39] == 79)
-            #expect(chasmcmd.buf[40] == 79)
-            #expect(chasmcmd.buf[41] == 66)
-            #expect(chasmcmd.buf[42] == 65)
-            #expect(chasmcmd.buf[43] == 82)
         }
+
+        #expect(chasmcmd.buf[38] == 70)
+        #expect(chasmcmd.buf[39] == 79)
+        #expect(chasmcmd.buf[40] == 79)
+        #expect(chasmcmd.buf[41] == 66)
+        #expect(chasmcmd.buf[42] == 65)
+        #expect(chasmcmd.buf[43] == 82)
     }
 
     @Test func opcodestest02() async throws {
@@ -765,6 +877,8 @@ struct chasmTest {
         //brk
         switch chasmcmd.preprocInput[0] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -779,6 +893,8 @@ struct chasmTest {
         //ora ($20, x)
         switch chasmcmd.preprocInput[1] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -793,6 +909,8 @@ struct chasmTest {
         //ora $20
         switch chasmcmd.preprocInput[2] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -807,6 +925,8 @@ struct chasmTest {
         //asl $20
         switch chasmcmd.preprocInput[3] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -821,6 +941,8 @@ struct chasmTest {
         //php
         switch chasmcmd.preprocInput[4] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -835,6 +957,8 @@ struct chasmTest {
         //ora #$20
          switch chasmcmd.preprocInput[5] {
          case .directive:
+             fallthrough
+         case .empty:
              #expect(Bool(false))
          case .code(let c):
              #expect(c.label == "")
@@ -849,6 +973,8 @@ struct chasmTest {
         //asl a
         switch chasmcmd.preprocInput[6] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -863,6 +989,8 @@ struct chasmTest {
         //ora $a000
         switch chasmcmd.preprocInput[7] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -877,6 +1005,8 @@ struct chasmTest {
         //asl $a000
         switch chasmcmd.preprocInput[8] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -893,6 +1023,8 @@ struct chasmTest {
         //label1: bpl label1
         switch chasmcmd.preprocInput[9] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL1")
@@ -907,6 +1039,8 @@ struct chasmTest {
         //ora ($20), y
         switch chasmcmd.preprocInput[10] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -921,6 +1055,8 @@ struct chasmTest {
         //ora $20,x
         switch chasmcmd.preprocInput[11] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -935,6 +1071,8 @@ struct chasmTest {
         //asl $20,x
         switch chasmcmd.preprocInput[12] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -949,6 +1087,8 @@ struct chasmTest {
         //clc
         switch chasmcmd.preprocInput[13] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -963,6 +1103,8 @@ struct chasmTest {
         //ora $a000, x
         switch chasmcmd.preprocInput[14] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -977,6 +1119,8 @@ struct chasmTest {
         //asl $a000, x
         switch chasmcmd.preprocInput[15] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -993,6 +1137,8 @@ struct chasmTest {
         //jsr $a000
         switch chasmcmd.preprocInput[16] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1007,6 +1153,8 @@ struct chasmTest {
         //and ($20, x)
         switch chasmcmd.preprocInput[17] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1021,6 +1169,8 @@ struct chasmTest {
         //bit $20
         switch chasmcmd.preprocInput[18] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1035,6 +1185,8 @@ struct chasmTest {
         //and $20
         switch chasmcmd.preprocInput[19] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1049,6 +1201,8 @@ struct chasmTest {
         //rol $20
         switch chasmcmd.preprocInput[20] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1063,6 +1217,8 @@ struct chasmTest {
         //plp
         switch chasmcmd.preprocInput[21] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1077,6 +1233,8 @@ struct chasmTest {
         //and #$20
         switch chasmcmd.preprocInput[22] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1091,6 +1249,8 @@ struct chasmTest {
         //rol a
         switch chasmcmd.preprocInput[23] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1105,6 +1265,8 @@ struct chasmTest {
         //bit $a000
         switch chasmcmd.preprocInput[24] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1119,6 +1281,8 @@ struct chasmTest {
         //and $a000
         switch chasmcmd.preprocInput[25] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1133,6 +1297,8 @@ struct chasmTest {
         //rol $a000
         switch chasmcmd.preprocInput[26] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1149,6 +1315,8 @@ struct chasmTest {
         //label2: bmi label2
         switch chasmcmd.preprocInput[27] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL2")
@@ -1163,6 +1331,8 @@ struct chasmTest {
         //and ($20),y
         switch chasmcmd.preprocInput[28] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1177,6 +1347,8 @@ struct chasmTest {
         //and $20,x
         switch chasmcmd.preprocInput[29] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1191,6 +1363,8 @@ struct chasmTest {
         //rol $20, x
         switch chasmcmd.preprocInput[30] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1205,6 +1379,8 @@ struct chasmTest {
         //sec
         switch chasmcmd.preprocInput[31] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1219,6 +1395,8 @@ struct chasmTest {
         //and $a000,x
         switch chasmcmd.preprocInput[32] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1233,6 +1411,8 @@ struct chasmTest {
         //rol $a000, x
         switch chasmcmd.preprocInput[33] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1249,6 +1429,8 @@ struct chasmTest {
         //rti
         switch chasmcmd.preprocInput[34] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1263,6 +1445,8 @@ struct chasmTest {
         //eor ($20, x)
         switch chasmcmd.preprocInput[35] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1277,6 +1461,8 @@ struct chasmTest {
         //eor $20
         switch chasmcmd.preprocInput[36] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1291,6 +1477,8 @@ struct chasmTest {
         //lsr $20
         switch chasmcmd.preprocInput[37] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1305,6 +1493,8 @@ struct chasmTest {
         //pha
         switch chasmcmd.preprocInput[38] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1319,6 +1509,8 @@ struct chasmTest {
         //eor #$20
         switch chasmcmd.preprocInput[39] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1333,6 +1525,8 @@ struct chasmTest {
         //lsr a
         switch chasmcmd.preprocInput[40] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1347,6 +1541,8 @@ struct chasmTest {
         //jmp $a000
         switch chasmcmd.preprocInput[41] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1361,6 +1557,8 @@ struct chasmTest {
         //eor $a000
         switch chasmcmd.preprocInput[42] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1375,6 +1573,8 @@ struct chasmTest {
         //lsr $a000
         switch chasmcmd.preprocInput[43] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1391,6 +1591,8 @@ struct chasmTest {
         //label3:     bvc  label3
         switch chasmcmd.preprocInput[44] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL3")
@@ -1405,6 +1607,8 @@ struct chasmTest {
         //eor ($20),y
         switch chasmcmd.preprocInput[45] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1419,6 +1623,8 @@ struct chasmTest {
         //eor $20,x
         switch chasmcmd.preprocInput[46] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1433,6 +1639,8 @@ struct chasmTest {
         //lsr $20, x
         switch chasmcmd.preprocInput[47] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1447,6 +1655,8 @@ struct chasmTest {
         //cli
         switch chasmcmd.preprocInput[48] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1461,6 +1671,8 @@ struct chasmTest {
         //eor $a000, x
         switch chasmcmd.preprocInput[49] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1475,6 +1687,8 @@ struct chasmTest {
         //lsr $a000,x
         switch chasmcmd.preprocInput[50] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1491,6 +1705,8 @@ struct chasmTest {
         //rts
         switch chasmcmd.preprocInput[51] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1505,6 +1721,8 @@ struct chasmTest {
         //adc ($20, x)
         switch chasmcmd.preprocInput[52] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1519,6 +1737,8 @@ struct chasmTest {
         //adc $20
         switch chasmcmd.preprocInput[53] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1533,6 +1753,8 @@ struct chasmTest {
         //ror $20
         switch chasmcmd.preprocInput[54] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1547,6 +1769,8 @@ struct chasmTest {
         //pla
         switch chasmcmd.preprocInput[55] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1561,6 +1785,8 @@ struct chasmTest {
         //adc #$20
         switch chasmcmd.preprocInput[56] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1575,6 +1801,8 @@ struct chasmTest {
         //ror A
         switch chasmcmd.preprocInput[57] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1589,6 +1817,8 @@ struct chasmTest {
         //jmp ($a000)
         switch chasmcmd.preprocInput[58] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1603,6 +1833,8 @@ struct chasmTest {
         //adc $a000
         switch chasmcmd.preprocInput[59] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1617,6 +1849,8 @@ struct chasmTest {
         //ror $a000
         switch chasmcmd.preprocInput[60] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1633,6 +1867,8 @@ struct chasmTest {
         //label4: bvs label4
         switch chasmcmd.preprocInput[61] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL4")
@@ -1647,6 +1883,8 @@ struct chasmTest {
         //adc ($20), y
         switch chasmcmd.preprocInput[62] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1661,6 +1899,8 @@ struct chasmTest {
         //adc $20, x
         switch chasmcmd.preprocInput[63] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1675,6 +1915,8 @@ struct chasmTest {
         //ror $20, x
         switch chasmcmd.preprocInput[64] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1689,6 +1931,8 @@ struct chasmTest {
         //sei
         switch chasmcmd.preprocInput[65] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1703,6 +1947,8 @@ struct chasmTest {
         //adc $a000,x
         switch chasmcmd.preprocInput[66] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1717,6 +1963,8 @@ struct chasmTest {
         //ror $a000, x
         switch chasmcmd.preprocInput[67] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1733,6 +1981,8 @@ struct chasmTest {
         //sta ($20, x)
         switch chasmcmd.preprocInput[68] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1747,6 +1997,8 @@ struct chasmTest {
         //sty $20
         switch chasmcmd.preprocInput[69] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1761,6 +2013,8 @@ struct chasmTest {
         //sta $20
         switch chasmcmd.preprocInput[70] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1775,6 +2029,8 @@ struct chasmTest {
         //stx $20
         switch chasmcmd.preprocInput[71] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1789,6 +2045,8 @@ struct chasmTest {
         //dey
         switch chasmcmd.preprocInput[72] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1803,6 +2061,8 @@ struct chasmTest {
         //txa
         switch chasmcmd.preprocInput[73] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1817,6 +2077,8 @@ struct chasmTest {
         //sty $a000
         switch chasmcmd.preprocInput[74] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1831,6 +2093,8 @@ struct chasmTest {
         //sta $a000
         switch chasmcmd.preprocInput[75] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1845,6 +2109,8 @@ struct chasmTest {
         //stx $a000
         switch chasmcmd.preprocInput[76] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1861,6 +2127,8 @@ struct chasmTest {
         //label5:     bcc     label5
         switch chasmcmd.preprocInput[77] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL5")
@@ -1875,6 +2143,8 @@ struct chasmTest {
         //sta ($20), y
         switch chasmcmd.preprocInput[78] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1889,6 +2159,8 @@ struct chasmTest {
         //sty $20, x
         switch chasmcmd.preprocInput[79] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1903,6 +2175,8 @@ struct chasmTest {
         //sta $20,x
         switch chasmcmd.preprocInput[80] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1917,6 +2191,8 @@ struct chasmTest {
         //stx $20, y
         switch chasmcmd.preprocInput[81] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1931,6 +2207,8 @@ struct chasmTest {
         //tya
         switch chasmcmd.preprocInput[82] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1945,6 +2223,8 @@ struct chasmTest {
         //sta $a000,y
         switch chasmcmd.preprocInput[83] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1959,6 +2239,8 @@ struct chasmTest {
         //txs
         switch chasmcmd.preprocInput[84] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1973,6 +2255,8 @@ struct chasmTest {
         //sta $a000, x
         switch chasmcmd.preprocInput[85] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -1989,6 +2273,8 @@ struct chasmTest {
         //ldy #$20
         switch chasmcmd.preprocInput[86] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2003,6 +2289,8 @@ struct chasmTest {
         //lda ($20, x)
         switch chasmcmd.preprocInput[87] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2017,6 +2305,8 @@ struct chasmTest {
         //ldx #$20
         switch chasmcmd.preprocInput[88] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2031,6 +2321,8 @@ struct chasmTest {
         //ldy $20
         switch chasmcmd.preprocInput[89] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2045,6 +2337,8 @@ struct chasmTest {
         //lda $20
         switch chasmcmd.preprocInput[90] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2059,6 +2353,8 @@ struct chasmTest {
         //ldx $20
         switch chasmcmd.preprocInput[91] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2073,6 +2369,8 @@ struct chasmTest {
         //tay
         switch chasmcmd.preprocInput[92] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2087,6 +2385,8 @@ struct chasmTest {
         //lda #$20
         switch chasmcmd.preprocInput[93] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2101,6 +2401,8 @@ struct chasmTest {
         //tax
         switch chasmcmd.preprocInput[94] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2115,6 +2417,8 @@ struct chasmTest {
         //ldy $a000
         switch chasmcmd.preprocInput[95] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2129,6 +2433,8 @@ struct chasmTest {
         //lda $a000
         switch chasmcmd.preprocInput[96] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2143,6 +2449,8 @@ struct chasmTest {
         //ldx $a000
         switch chasmcmd.preprocInput[97] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2159,6 +2467,8 @@ struct chasmTest {
         //label6:bcs label6
         switch chasmcmd.preprocInput[98] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL6")
@@ -2173,6 +2483,8 @@ struct chasmTest {
         //lda ($20), y
         switch chasmcmd.preprocInput[99] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2187,6 +2499,8 @@ struct chasmTest {
         //ldy $20,x
         switch chasmcmd.preprocInput[100] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2201,6 +2515,8 @@ struct chasmTest {
         //lda $20,x
         switch chasmcmd.preprocInput[101] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2215,6 +2531,8 @@ struct chasmTest {
         //ldx $20, y
         switch chasmcmd.preprocInput[102] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2229,6 +2547,8 @@ struct chasmTest {
         //clv
         switch chasmcmd.preprocInput[103] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2243,6 +2563,8 @@ struct chasmTest {
         //lda $a000, y
         switch chasmcmd.preprocInput[104] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2257,6 +2579,8 @@ struct chasmTest {
         //tsx
         switch chasmcmd.preprocInput[105] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2271,6 +2595,8 @@ struct chasmTest {
         //ldy $a000, x
         switch chasmcmd.preprocInput[106] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2285,6 +2611,8 @@ struct chasmTest {
         //lda $a000,x
         switch chasmcmd.preprocInput[107] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2299,6 +2627,8 @@ struct chasmTest {
         //ldx $a000,y
         switch chasmcmd.preprocInput[108] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2315,6 +2645,8 @@ struct chasmTest {
         //cpy #$20
         switch chasmcmd.preprocInput[109] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2329,6 +2661,8 @@ struct chasmTest {
         //cmp ($20, x)
         switch chasmcmd.preprocInput[110] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2343,6 +2677,8 @@ struct chasmTest {
         //cpy $20
         switch chasmcmd.preprocInput[111] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2357,6 +2693,8 @@ struct chasmTest {
         //cmp $20
         switch chasmcmd.preprocInput[112] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2371,6 +2709,8 @@ struct chasmTest {
         //dec $20
         switch chasmcmd.preprocInput[113] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2385,6 +2725,8 @@ struct chasmTest {
         //iny
         switch chasmcmd.preprocInput[114] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2399,6 +2741,8 @@ struct chasmTest {
         //cmp #$20
         switch chasmcmd.preprocInput[115] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2413,6 +2757,8 @@ struct chasmTest {
         //dex
         switch chasmcmd.preprocInput[116] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2427,6 +2773,8 @@ struct chasmTest {
         //cpy $a000
         switch chasmcmd.preprocInput[117] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2441,6 +2789,8 @@ struct chasmTest {
         //cmp $a000
         switch chasmcmd.preprocInput[118] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2455,6 +2805,8 @@ struct chasmTest {
         //dec $a000
         switch chasmcmd.preprocInput[119] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2471,6 +2823,8 @@ struct chasmTest {
         //label7:     bne label7
         switch chasmcmd.preprocInput[120] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL7")
@@ -2485,6 +2839,8 @@ struct chasmTest {
         //cmp ($20), y
         switch chasmcmd.preprocInput[121] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2499,6 +2855,8 @@ struct chasmTest {
         //cmp $20, x
         switch chasmcmd.preprocInput[122] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2513,6 +2871,8 @@ struct chasmTest {
         //dec $20, x
         switch chasmcmd.preprocInput[123] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2527,6 +2887,8 @@ struct chasmTest {
         //cld
         switch chasmcmd.preprocInput[124] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2541,6 +2903,8 @@ struct chasmTest {
         //cmp $a000, x
         switch chasmcmd.preprocInput[125] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2555,6 +2919,8 @@ struct chasmTest {
         //dec $a000,x
         switch chasmcmd.preprocInput[126] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2571,6 +2937,8 @@ struct chasmTest {
         //cpx #$20
         switch chasmcmd.preprocInput[127] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2585,6 +2953,8 @@ struct chasmTest {
         //sbc ($20, x)
         switch chasmcmd.preprocInput[128] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2599,6 +2969,8 @@ struct chasmTest {
         //cpx $20
         switch chasmcmd.preprocInput[129] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2613,6 +2985,8 @@ struct chasmTest {
         //sbc $20
         switch chasmcmd.preprocInput[130] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2627,6 +3001,8 @@ struct chasmTest {
         //inc $20
         switch chasmcmd.preprocInput[131] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2641,6 +3017,8 @@ struct chasmTest {
         //inx
         switch chasmcmd.preprocInput[132] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2655,6 +3033,8 @@ struct chasmTest {
         //sbc #$20
         switch chasmcmd.preprocInput[133] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2669,6 +3049,8 @@ struct chasmTest {
         //nop
         switch chasmcmd.preprocInput[134] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2683,6 +3065,8 @@ struct chasmTest {
         //cpx $a000
         switch chasmcmd.preprocInput[135] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2697,6 +3081,8 @@ struct chasmTest {
         //sbc $a000
         switch chasmcmd.preprocInput[136] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2711,6 +3097,8 @@ struct chasmTest {
         //inc $a000
         switch chasmcmd.preprocInput[137] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2727,6 +3115,8 @@ struct chasmTest {
         //label8:beq label8
         switch chasmcmd.preprocInput[138] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "LABEL8")
@@ -2741,6 +3131,8 @@ struct chasmTest {
         //sbc ($20), y
         switch chasmcmd.preprocInput[139] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2755,6 +3147,8 @@ struct chasmTest {
         //sbc $20, x
         switch chasmcmd.preprocInput[140] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2769,6 +3163,8 @@ struct chasmTest {
         //inc $20, x
         switch chasmcmd.preprocInput[141] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2783,6 +3179,8 @@ struct chasmTest {
         //sed
         switch chasmcmd.preprocInput[142] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2797,6 +3195,8 @@ struct chasmTest {
         //sbc $a000, x
         switch chasmcmd.preprocInput[143] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")
@@ -2811,6 +3211,8 @@ struct chasmTest {
         //inc $a000,x
         switch chasmcmd.preprocInput[144] {
         case .directive:
+            fallthrough
+        case .empty:
             #expect(Bool(false))
         case .code(let c):
             #expect(c.label == "")

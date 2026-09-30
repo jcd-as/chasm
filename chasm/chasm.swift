@@ -41,6 +41,7 @@ public struct DirectiveLine: Decodable {
 public enum Line: Decodable {
 	case code(CodeLine)
 	case directive(DirectiveLine)
+	case empty(Int)
 }
 
 public func highByte(_ word: UInt16) -> UInt8 {
@@ -66,8 +67,13 @@ public struct Chasm: ParsableCommand {
 	// flag to indicate we are currently parsing a sub-routine
 	// (contains the sub-routine name)
 	var sub = ""
-	// flag to indicate we are currently parsing a macro
-	//var mac = false
+	// flag to indicate we are currently parsing a macro definition
+	// (contains the macro name)
+	var mac = ""
+	// current macro contents
+	var macdef: [String] = []
+	// macro name->definition map
+	var macros: [String:[String]] = [:]
 
 	// explicit public init is needed
 	public init() {
@@ -95,9 +101,9 @@ public struct Chasm: ParsableCommand {
 		lines = content.components(separatedBy: .newlines)
 
 		// TODO: impl:
-		// - (optional?) pre-process:
+		// - pre-process:
 		//   - expand macros
-		//preprocess(lines)
+		preprocess()
 
 		// first pass, scan line by line, tracking:
 		//  - handle directives (.org etc) & update pc/offset
@@ -159,6 +165,8 @@ public struct Chasm: ParsableCommand {
 					return 0
 				}
 			case .code:
+				fallthrough
+			case .empty:
 				return 0
 			}
 		}
@@ -181,6 +189,27 @@ public struct Chasm: ParsableCommand {
 					fatal("error writing lines to symbol file: '\(url.relativePath)'")
 				}
 			}
+		}
+	}
+
+	// MARK: preprocessing
+
+	// preprocesses the file, handling reading macro definitions and replacing them
+	// inline where used
+	public mutating func preprocess() {
+		// TODO:
+		// line-by-line
+		var linenum = 0
+		while linenum < lines.count {
+			let line = lines[linenum]
+			//pc = parseLine(line, number: UInt16(linenum), from: pc)
+			preprocessLine(line, number: UInt16(linenum))
+			linenum += 1
+		}
+		// if we're in a macro definition still, error
+		if mac.count > 0 {
+			err("missing .ENDMAC directive: un-closed macro definition", line: UInt16(linenum))
+			abort()
 		}
 	}
 
@@ -207,6 +236,44 @@ public struct Chasm: ParsableCommand {
 		}
 	}
 
+	// MARK: preprocessing methods
+
+	public mutating func preprocessLine(_ line: String, number: UInt16) {
+		let ln = line.uppercased()
+
+		if ln.trimmingCharacters(in: .whitespaces) == ".ENDMAC" {
+			// end macro, save it
+			macros[mac] = macdef
+			mac = ""
+			macdef = []
+		} else if mac.count > 0 {
+			// are we in a macro definition already?
+			// TODO: ensure labels are unique!!
+			//       (mac+<UUID>+label ??)
+			macdef.append(line)
+		} else if ln.hasPrefix(".MAC") {
+			// if we're already defining a mac, error
+			if mac.count > 0 {
+				err("nested macros are not allowed", line: number)
+				abort()
+			}
+			// check for .MAC macro definition
+			let msplit = ln.split(maxSplits: 1) { $0.isWhitespace }
+			if msplit.count != 2 {
+				err("invalid .MAC: '\(line)': no name", line: number)
+				abort()
+			}
+			// start a new macros entry
+			mac = String(msplit[1])
+		} else {
+			// TODO:
+			// check each line for use of any of the macros defined so far
+			//  found:
+			//  replace the line with the lines stored in macros
+		}
+	}
+
+
 	// MARK: pass one methods
 
 	public mutating func parseLine(_ line: String, number: UInt16, from pc: UInt16) -> UInt16 {
@@ -217,15 +284,24 @@ public struct Chasm: ParsableCommand {
 		}
 		// directive?
 		let d = directive(line, number: number, from: pc)
-		if let dir = d {
-			preprocInput.append(Line.directive(dir))
-			// if the directive changed the pc, change it
-			if let npc = dir.newPC {
-				if npc < offset {
-					err("directive cannot set org prior to current location", line: number)
-					abort()
+		if let ln = d {
+			switch ln {
+			case .code:
+				// wtf??
+				fallthrough
+			case .empty:
+				break
+			case .directive(let dir):
+				preprocInput.append(ln)
+				//preprocInput.append(Line.directive(dir))
+				// if the directive changed the pc, change it
+				if let npc = dir.newPC {
+					if npc < offset {
+						err("directive cannot set org prior to current location", line: number)
+						abort()
+					}
+					offset = npc
 				}
-				offset = npc
 			}
 		} else {
 			// code line?
@@ -241,9 +317,9 @@ public struct Chasm: ParsableCommand {
 		return offset
 	}
 
-	// TODO: handle all directives .incbin, .mac...
+	// TODO: handle all directives .incbin
 	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16)
-		-> DirectiveLine?
+		-> Line?
 	{
 		// strip off comments
 		let stripped = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)[0]
@@ -255,8 +331,13 @@ public struct Chasm: ParsableCommand {
 		let name = String(parts[0]).trimmingCharacters(in: .whitespaces).uppercased()
 		let content = parts.count < 2 ? "" : String(parts[1]).trimmingCharacters(in: .whitespaces).uppercased()
 		var npc = pc
-		// TODO: impl .incbin, .mac
+		// TODO: impl .incbin
 		switch name {
+		case ".MAC":
+			fallthrough
+		case ".ENDMAC":
+			// ignore
+			return Line.empty(0)
 		case ".INCLUDE":
 			if parts.count != 2 {
 				err("missing filename in .INCLUDE directive", line: number)
@@ -273,8 +354,8 @@ public struct Chasm: ParsableCommand {
 			}
 			let inclines = filecontents.components(separatedBy: .newlines)
 			lines.insert(contentsOf: inclines, at: Int(number+1))
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: pc)
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc))
 		case ".SUB":
 			// 'content' should be a valid label
 			if !content.hasSuffix(":") {
@@ -295,12 +376,12 @@ public struct Chasm: ParsableCommand {
 			// add label to symbol table with current pc
 			symbolTable[label] = pc
 			sub = label
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: pc)
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc))
 		case ".ENDSUB":
 			sub = ""
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: pc)
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc))
 		case ".ORG":
 			// 'content' should be convertible to a hex number
 			if let n = parseNum(content) {
@@ -309,14 +390,14 @@ public struct Chasm: ParsableCommand {
 				err("invalid number '\(content)'", line: number)
 				abort()
 			}
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: npc)
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: npc))
 		case ".DATA":
 			// TODO: validate content ?
 			let parts = content.split { $0.isWhitespace }
-			return DirectiveLine(
+			return Line.directive(DirectiveLine(
 				linenum: number, offset: pc, name: name, content: content,
-				newPC: pc + UInt16(parts.count))
+				newPC: pc + UInt16(parts.count)))
 		case ".BYTE":
 			// TODO: validate content ?
 			let parts = content.split(separator: ",", maxSplits: 1)
@@ -331,8 +412,8 @@ public struct Chasm: ParsableCommand {
 			} else {
 				npc += 1
 			}
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: npc)
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: npc))
 		case ".WORD":
 			// TODO: validate content ?
 			let parts = content.split(separator: ",", maxSplits: 1)
@@ -347,13 +428,13 @@ public struct Chasm: ParsableCommand {
 			} else {
 				npc += 2
 			}
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: npc)
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: npc))
 		case ".STRING":
 			// TODO: validate content ?
 			let len = content.count
-			return DirectiveLine(
-				linenum: number, offset: pc, name: name, content: content, newPC: pc + UInt16(len))
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: content, newPC: pc + UInt16(len)))
 		case ".DEF":
 			// parse out symbol & value from 'content'
 			let contentparts = content.split(maxSplits: 1) { $0.isWhitespace }
@@ -376,8 +457,8 @@ public struct Chasm: ParsableCommand {
 				}
 				// enter into symbol table
 				symbolTable[lhs] = n
-				return DirectiveLine(
-					linenum: number, offset: pc, name: name, content: "", newPC: nil)
+				return Line.directive(DirectiveLine(
+					linenum: number, offset: pc, name: name, content: "", newPC: nil))
 			} else {
 				err("invalid .DEF value: '\(rhs)'", line: number)
 				abort()
@@ -389,6 +470,11 @@ public struct Chasm: ParsableCommand {
 
 	public mutating func code(_ line: String, number: UInt16, from pc: UInt16) -> CodeLine? {
 		// label: opcode arg1, arg2 ; comment
+
+		// if we're in a macro definition, ignore
+		if mac.count > 0 {
+			return nil
+		}
 
 		// strip comments, if any
 		let stripped = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)[0]
@@ -702,6 +788,8 @@ public struct Chasm: ParsableCommand {
 			generateForDirective(d, from: &from)
 		case .code(let c):
 			generateForCode(c, from: &from)
+		case .empty:
+			break
 		}
 	}
 

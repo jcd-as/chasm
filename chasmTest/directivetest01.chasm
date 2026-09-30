@@ -9,3 +9,8 @@
 ;@local:
 ;rts
 ;.endsub
+.mac mymacro
+lda #$ea
+adc #$ae
+.endmac
+
