@@ -44,6 +44,11 @@ public enum Line: Decodable {
 	case empty(Int)
 }
 
+public struct Macro: Decodable {
+	let lines: [String]
+	let numargs: Int
+}
+
 public func highByte(_ word: UInt16) -> UInt8 {
 	return UInt8((word >> 8) & 0xFF)
 }
@@ -70,10 +75,12 @@ public struct Chasm: ParsableCommand {
 	// flag to indicate we are currently parsing a macro definition
 	// (contains the macro name)
 	var mac = ""
+	// number of args in the currently parsed macro def
+	var macargs = 0
 	// current macro contents
 	var macdef: [String] = []
 	// macro name->definition map
-	var macros: [String:[String]] = [:]
+	var macros: [String:Macro] = [:]
 
 	// explicit public init is needed
 	public init() {
@@ -197,12 +204,10 @@ public struct Chasm: ParsableCommand {
 	// preprocesses the file, handling reading macro definitions and replacing them
 	// inline where used
 	public mutating func preprocess() {
-		// TODO:
 		// line-by-line
 		var linenum = 0
 		while linenum < lines.count {
 			let line = lines[linenum]
-			//pc = parseLine(line, number: UInt16(linenum), from: pc)
 			preprocessLine(line, number: UInt16(linenum))
 			linenum += 1
 		}
@@ -243,8 +248,9 @@ public struct Chasm: ParsableCommand {
 
 		if ln.trimmingCharacters(in: .whitespaces) == ".ENDMAC" {
 			// end macro, save it
-			macros[mac] = macdef
+			macros[mac] = Macro(lines: macdef, numargs: macargs)
 			mac = ""
+			macargs = 0
 			macdef = []
 		} else if mac.count > 0 {
 			// are we in a macro definition already?
@@ -258,18 +264,58 @@ public struct Chasm: ParsableCommand {
 				abort()
 			}
 			// check for .MAC macro definition
-			let msplit = ln.split(maxSplits: 1) { $0.isWhitespace }
-			if msplit.count != 2 {
+			let msplit = ln.split(maxSplits: 2) { $0.isWhitespace }
+			if msplit.count < 2 {
 				err("invalid .MAC: '\(line)': no name", line: number)
 				abort()
+			}
+			// 3rd field is number of arguments
+			if msplit.count == 3 {
+				if let n = Int(msplit[2]) {
+					macargs = n
+				}
 			}
 			// start a new macros entry
 			mac = String(msplit[1])
 		} else {
-			// TODO:
 			// check each line for use of any of the macros defined so far
-			//  found:
-			//  replace the line with the lines stored in macros
+			// (a macro use must be the only thing on the line
+			//  e.g. '    MyMac $ff A' => invoke the macro MYMAC with the parameters $ff and A)
+			let lnsplit = ln.split { $0.isWhitespace }
+			var args: [Substring]
+			if lnsplit.count > 1 {
+				args = Array(lnsplit[1...])
+			} else {
+				args = []
+			}
+			for m in macros {
+				if ln.trimmingCharacters(in: .whitespaces).hasPrefix(m.key) {
+					// are there the right number of parameters?
+					if args.count != m.value.numargs {
+						err("wrong number of parameters to macro '\(m.key)'", line: number)
+						abort()
+					}
+
+					// replace the line with the lines stored in macros
+					// remove the current line
+					lines.remove(at: Int(number))
+					var n = number
+					for l in m.value.lines {
+						// replace any parameters 
+						var outl = l
+						for i in 0..<m.value.numargs {
+							let arg = "{\(i)}"
+							outl = outl.replacing(arg, with: args[i])
+						}
+						// (inserting lines here is somewhat odd, because the caller is looping
+						// over all the lines, which means the lines we insert will be processed
+						// after they are inserted. but since macros cannot be nested, this
+						// shouldn't be a problem. i.e. those lines will be ignored)
+						lines.insert(outl, at: Int(n))
+						n += 1
+					}
+				}
+			}
 		}
 	}
 
@@ -287,13 +333,12 @@ public struct Chasm: ParsableCommand {
 		if let ln = d {
 			switch ln {
 			case .code:
-				// wtf??
-				fallthrough
-			case .empty:
+				// wtf?? directive() should never return type .code
 				break
+			case .empty:
+				return offset
 			case .directive(let dir):
 				preprocInput.append(ln)
-				//preprocInput.append(Line.directive(dir))
 				// if the directive changed the pc, change it
 				if let npc = dir.newPC {
 					if npc < offset {
@@ -318,8 +363,7 @@ public struct Chasm: ParsableCommand {
 	}
 
 	// TODO: handle all directives .incbin
-	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16)
-		-> Line?
+	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16) -> Line?
 	{
 		// strip off comments
 		let stripped = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)[0]
@@ -329,14 +373,23 @@ public struct Chasm: ParsableCommand {
 		}
 		let parts = stripped.split(maxSplits: 1) { $0.isWhitespace }
 		let name = String(parts[0]).trimmingCharacters(in: .whitespaces).uppercased()
+
+		// if this is not .ENDMAC and we're in a macro def, ignore
+		if name != ".ENDMAC" && mac.count > 0 {
+			return Line.empty(0)
+		}
+
 		let content = parts.count < 2 ? "" : String(parts[1]).trimmingCharacters(in: .whitespaces).uppercased()
 		var npc = pc
 		// TODO: impl .incbin
 		switch name {
 		case ".MAC":
-			fallthrough
+			// we're now processing a macro def (ignoring, really)
+			mac = "true"
+			return Line.empty(0)
 		case ".ENDMAC":
-			// ignore
+			// done processing (ignoring) a macro def
+			mac = ""
 			return Line.empty(0)
 		case ".INCLUDE":
 			if parts.count != 2 {

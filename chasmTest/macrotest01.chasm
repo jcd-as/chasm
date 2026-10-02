@@ -1,0 +1,16 @@
+; test macro definition and expansion
+
+.org $1000
+
+; macro named 'foo' with 2 parameters
+.mac foo 2
+    nop
+    lda #{0}
+    sta {1}
+.endmac
+
+lda #$00
+adc $10
+foo $ea $01
+tax
+stx $02

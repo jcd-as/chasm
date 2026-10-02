@@ -9,8 +9,8 @@
 ;@local:
 ;rts
 ;.endsub
-.mac mymacro
+.mac mymacro 1
 lda #$ea
-adc #$ae
+adc #{1}
 .endmac
 

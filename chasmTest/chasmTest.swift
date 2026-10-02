@@ -36,7 +36,7 @@ struct chasmTest {
         
         try chasmcmd.run()
 
-        #expect(chasmcmd.preprocInput.count == 12)
+        #expect(chasmcmd.preprocInput.count == 10)
         
         switch chasmcmd.preprocInput[0] {
         case .directive(let directive):
@@ -153,9 +153,9 @@ struct chasmTest {
         }
 
         //.mac mymacro definition
-        #expect(chasmcmd.macros["MYMACRO"]?.count == 2)
-        #expect(chasmcmd.macros["MYMACRO"]?[0] == "lda #$ea")
-        #expect(chasmcmd.macros["MYMACRO"]?[1] == "adc #$ae")
+        #expect(chasmcmd.macros["MYMACRO"]?.lines.count == 2)
+        #expect(chasmcmd.macros["MYMACRO"]?.lines[0] == "lda #$ea")
+        #expect(chasmcmd.macros["MYMACRO"]?.lines[1] == "adc #{1}")
     }
 
     @Test func opcodesTest() async throws {
@@ -3224,3 +3224,113 @@ struct chasmTest {
         }
     }
 }
+
+@Test func macrosTest01() async throws {
+    let fnurl = try fileURL("macrotest01", withExtension: "chasm")
+    let args = [fnurl.path()]
+    let cmd = try Chasm.parseAsRoot(args)
+    var chasmcmd = try #require(cmd as? Chasm)
+    try chasmcmd.run()
+    
+    // number of non-blank (or comment-only) lines:
+    // TODO: update as lines are added to test file...
+    #expect(chasmcmd.preprocInput.count == 8)
+    
+    
+    #expect(chasmcmd.macros.count == 1)
+    #expect(chasmcmd.macros["FOO"]?.lines.count == 3)
+    #expect(chasmcmd.macros["FOO"]?.lines[0] == "    nop")
+    #expect(chasmcmd.macros["FOO"]?.lines[1] == "    lda #{0}")
+    #expect(chasmcmd.macros["FOO"]?.lines[2] == "    sta {1}")
+    #expect(chasmcmd.macros["FOO"]?.numargs == 2)
+
+    // .org $1000
+    switch chasmcmd.preprocInput[0] {
+    case .directive(let directive):
+        #expect(directive.name == ".ORG")
+        #expect(directive.content == "$1000")
+        #expect(directive.newPC == 4096)
+    case .code:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+
+    // lda #$00
+    switch chasmcmd.preprocInput[1] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == "LDA")
+        #expect(c.arg1 == "#$00")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+    
+    // adc $10
+    switch chasmcmd.preprocInput[2] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == "ADC")
+        #expect(c.arg1 == "$10")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+    
+    //nop
+    switch chasmcmd.preprocInput[3] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == "NOP")
+        #expect(c.arg1 == "")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+    
+    //lda #$ea
+    switch chasmcmd.preprocInput[4] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == "LDA")
+        #expect(c.arg1 == "#$EA")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+    
+    //sta $01
+    switch chasmcmd.preprocInput[5] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == "STA")
+        #expect(c.arg1 == "$01")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+    
+    //tax
+    switch chasmcmd.preprocInput[6] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == "TAX")
+        #expect(c.arg1 == "")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+    
+    //stx $02
+    switch chasmcmd.preprocInput[7] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == "STX")
+        #expect(c.arg1 == "$02")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+}
+
