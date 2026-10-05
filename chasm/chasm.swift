@@ -7,7 +7,6 @@
 // TODO:
 // P1
 // * directives: .incbin
-// * macros: .mac/.endmac - all enclosed labels must be local
 // P2
 // * support basic math on symbols (esp +[offset])
 // * error handling - better error messages from closer to failure site
@@ -107,9 +106,8 @@ public struct Chasm: ParsableCommand {
 		let content = try String(contentsOf: fileURL, encoding: .utf8)
 		lines = content.components(separatedBy: .newlines)
 
-		// TODO: impl:
-		// - pre-process:
-		//   - expand macros
+		// pre-process:
+		//  - expand macros
 		preprocess()
 
 		// first pass, scan line by line, tracking:
@@ -255,8 +253,6 @@ public struct Chasm: ParsableCommand {
 			macdef = []
 		} else if mac.count > 0 {
 			// are we in a macro definition already?
-			// TODO: ensure labels are unique!!
-			//       (mac+<UUID>+label ??)
 			macdef.append(line)
 		} else if ln.hasPrefix(".MAC") {
 			// if we're already defining a mac, error
@@ -298,8 +294,6 @@ public struct Chasm: ParsableCommand {
 						abort()
 					}
 
-					// TODO: also need to make local labels unique (append line num)
-					//       and issue warning for non-local labels
 					// replace the line with the lines stored in macros
 					// remove the current line
 					lines.remove(at: Int(number))
@@ -382,7 +376,7 @@ public struct Chasm: ParsableCommand {
 		return offset
 	}
 
-	// TODO: handle all directives .incbin
+	// TODO: handle all directives: .incbin
 	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16) -> Line?
 	{
 		// strip off comments
@@ -868,7 +862,7 @@ public struct Chasm: ParsableCommand {
 	}
 
 	public mutating func generateForDirective(_ line: DirectiveLine, from: inout UInt16) {
-		// TODO: impl all directives: .mac, .include, .incbin...
+		// TODO: impl all directives: .incbin...
 		// if a new pc (address) was set, use it
 		if let newpc = line.newPC {
 			let len = Int(newpc) - Int(from)
@@ -878,7 +872,6 @@ public struct Chasm: ParsableCommand {
 			}
 			from = newpc
 		} else {
-			// TODO: .defs and macros don't change the address (PC)...
 			if line.name != ".DEF" {
 				err("invalid \(line.name) directive", line: line.linenum)
 				abort()
