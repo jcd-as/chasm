@@ -3234,14 +3234,16 @@ struct chasmTest {
     
     // number of non-blank (or comment-only) lines:
     // TODO: update as lines are added to test file...
-    #expect(chasmcmd.preprocInput.count == 8)
+    #expect(chasmcmd.preprocInput.count == 10)
     
     
     #expect(chasmcmd.macros.count == 1)
-    #expect(chasmcmd.macros["FOO"]?.lines.count == 3)
+    #expect(chasmcmd.macros["FOO"]?.lines.count == 5)
     #expect(chasmcmd.macros["FOO"]?.lines[0] == "    nop")
-    #expect(chasmcmd.macros["FOO"]?.lines[1] == "    lda #{0}")
-    #expect(chasmcmd.macros["FOO"]?.lines[2] == "    sta {1}")
+    #expect(chasmcmd.macros["FOO"]?.lines[1] == "@loop:          ; local label, should get turned into \"loopN:\" (N = line number)")
+    #expect(chasmcmd.macros["FOO"]?.lines[2] == "    lda #{0}")
+    #expect(chasmcmd.macros["FOO"]?.lines[3] == "    sta {1}")
+    #expect(chasmcmd.macros["FOO"]?.lines[4] == "no_loop:        ; non-local label, should flag warning, but not get modified")
     #expect(chasmcmd.macros["FOO"]?.numargs == 2)
 
     // .org $1000
@@ -3289,8 +3291,20 @@ struct chasmTest {
         #expect(Bool(false))
     }
     
-    //lda #$ea
+    // local label in macro - should be converted to non-local w/ line number appended for uniqueness
     switch chasmcmd.preprocInput[4] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == nil)
+        #expect(c.arg1 == "")
+        #expect(c.label == "LOOP15")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+
+    //lda #$ea
+    switch chasmcmd.preprocInput[5] {
     case .code(let c):
         #expect(c.op?.mnemonic == "LDA")
         #expect(c.arg1 == "#$EA")
@@ -3299,9 +3313,9 @@ struct chasmTest {
     case .empty:
         #expect(Bool(false))
     }
-    
+
     //sta $01
-    switch chasmcmd.preprocInput[5] {
+    switch chasmcmd.preprocInput[6] {
     case .code(let c):
         #expect(c.op?.mnemonic == "STA")
         #expect(c.arg1 == "$01")
@@ -3311,8 +3325,20 @@ struct chasmTest {
         #expect(Bool(false))
     }
     
+    // non-local label in macro, should be un-modified
+    switch chasmcmd.preprocInput[7] {
+    case .code(let c):
+        #expect(c.op?.mnemonic == nil)
+        #expect(c.arg1 == "")
+        #expect(c.label == "NO_LOOP")
+    case .directive:
+        fallthrough
+    case .empty:
+        #expect(Bool(false))
+    }
+
     //tax
-    switch chasmcmd.preprocInput[6] {
+    switch chasmcmd.preprocInput[8] {
     case .code(let c):
         #expect(c.op?.mnemonic == "TAX")
         #expect(c.arg1 == "")
@@ -3321,9 +3347,9 @@ struct chasmTest {
     case .empty:
         #expect(Bool(false))
     }
-    
+
     //stx $02
-    switch chasmcmd.preprocInput[7] {
+    switch chasmcmd.preprocInput[9] {
     case .code(let c):
         #expect(c.op?.mnemonic == "STX")
         #expect(c.arg1 == "$02")

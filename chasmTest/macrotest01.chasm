@@ -5,8 +5,10 @@
 ; macro named 'foo' with 2 parameters
 .mac foo 2
     nop
+@loop:          ; local label, should get turned into "loopN:" (N = line number)
     lda #{0}
     sta {1}
+no_loop:        ; non-local label, should flag warning, but not get modified
 .endmac
 
 lda #$00

@@ -208,8 +208,7 @@ public struct Chasm: ParsableCommand {
 		var linenum = 0
 		while linenum < lines.count {
 			let line = lines[linenum]
-			preprocessLine(line, number: UInt16(linenum))
-			linenum += 1
+			linenum += preprocessLine(line, number: UInt16(linenum))
 		}
 		// if we're in a macro definition still, error
 		if mac.count > 0 {
@@ -243,7 +242,9 @@ public struct Chasm: ParsableCommand {
 
 	// MARK: preprocessing methods
 
-	public mutating func preprocessLine(_ line: String, number: UInt16) {
+	// preprocesses a line of input and returns the number of lines produced
+	// (in the case of macro expansion it will return >1, otherwise 1)
+	public mutating func preprocessLine(_ line: String, number: UInt16) -> Int {
 		let ln = line.uppercased()
 
 		if ln.trimmingCharacters(in: .whitespaces) == ".ENDMAC" {
@@ -288,6 +289,7 @@ public struct Chasm: ParsableCommand {
 			} else {
 				args = []
 			}
+			var numlines = 1
 			for m in macros {
 				if ln.trimmingCharacters(in: .whitespaces).hasPrefix(m.key) {
 					// are there the right number of parameters?
@@ -296,27 +298,45 @@ public struct Chasm: ParsableCommand {
 						abort()
 					}
 
+					// TODO: also need to make local labels unique (append line num)
+					//       and issue warning for non-local labels
 					// replace the line with the lines stored in macros
 					// remove the current line
 					lines.remove(at: Int(number))
 					var n = number
+					numlines = m.value.lines.count
 					for l in m.value.lines {
-						// replace any parameters 
 						var outl = l
+
+						// is this line a label?
+						let stripped = l.trimmingCharacters(in: .whitespaces)
+						let ssplit = stripped.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+						if ssplit.count == 2 {
+							let label = String(ssplit[0])
+							if label.first == "@" {
+								// local label, append line number to make unique
+								outl = l.replacing(label, with: "\(label)\(number)")
+								outl = String(outl.trimmingPrefix("@"))
+							} else {
+								// non-local label, issue warning
+								warn("non-local label in macro - this is likely an error", line: number)
+							}
+						}
+
+						// replace any parameters 
 						for i in 0..<m.value.numargs {
 							let arg = "{\(i)}"
 							outl = outl.replacing(arg, with: args[i])
 						}
-						// (inserting lines here is somewhat odd, because the caller is looping
-						// over all the lines, which means the lines we insert will be processed
-						// after they are inserted. but since macros cannot be nested, this
-						// shouldn't be a problem. i.e. those lines will be ignored)
 						lines.insert(outl, at: Int(n))
 						n += 1
 					}
+					break
 				}
 			}
+			return numlines
 		}
+		return 1
 	}
 
 
@@ -563,13 +583,14 @@ public struct Chasm: ParsableCommand {
 			// add label to symbol table with current pc
 			symbolTable[label] = pc
 
-			code = String(ssplit[1])
+            code = String(ssplit[1]).trimmingCharacters(in: .whitespaces)
 		} else {
-			code = String(ssplit[0])
+            code = String(ssplit[0]).trimmingCharacters(in: .whitespaces)
 		}
 		if code.count > 0 {
 			// split1 by whitespace for opcode & args
 			let codesplit = code.split(maxSplits: 1) { $0.isWhitespace }
+            //if codesplit.count > 0 { // will be zero if it was just whitespace to the right
 			let opcode = codesplit[0].uppercased()
 			// check opcode validity
 			if !validOpcode(opcode) {
