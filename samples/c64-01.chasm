@@ -38,10 +38,12 @@ sta $dc0d
 lda $dc0d	; ack pending CIA ints
 lda $dd0d
 
-lda #$1b	; bit 8 of raster ctrl1 clear for lines 0-255
+;lda #$1b	; bit 7 of raster ctrl1 *clear* for lines 0-255
+;lda #%00011011 ; $1b in binary
+lda #%10011011  ; bit 7 of ctrl1 *set* for lines over 255
 sta CTRL1
 
-lda #$ff	; trigger int at scanline 100
+lda #$20	; trigger int at scanline 287/$11f ($ff+$20 - "bit 8" of RASTER is in bit 7 of CTRL1)
 sta RASTER
 
 ;;; redirect IRQ vector to custom handler

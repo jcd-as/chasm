@@ -1,0 +1,1 @@
+x64sc -moncommands c64-01.sym.lbl c64-01.out
