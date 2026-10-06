@@ -36,7 +36,7 @@ struct chasmTest {
         
         try chasmcmd.run()
 
-        #expect(chasmcmd.preprocInput.count == 10)
+        #expect(chasmcmd.preprocInput.count == 11)
         
         switch chasmcmd.preprocInput[0] {
         case .directive(let directive):
@@ -51,6 +51,32 @@ struct chasmTest {
 
         switch chasmcmd.preprocInput[1] {
         case .directive(let directive):
+            #expect(directive.name == ".INCBIN")
+            #expect(directive.content == "inc.bin")
+            #expect(directive.newPC == 4096)
+        case .code:
+            fallthrough
+        case .empty:
+            #expect(Bool(false))
+        }
+        #expect(chasmcmd.buf[0] == 0x0c)
+        #expect(chasmcmd.buf[1] == 0x08)
+        #expect(chasmcmd.buf[2] == 0x0a)
+        #expect(chasmcmd.buf[3] == 0x00)
+        #expect(chasmcmd.buf[4] == 0x9e)
+        #expect(chasmcmd.buf[5] == 0x32)
+        #expect(chasmcmd.buf[6] == 0x30)
+        #expect(chasmcmd.buf[7] == 0x36)
+        #expect(chasmcmd.buf[8] == 0x34)
+        #expect(chasmcmd.buf[9] == 0x00)
+        #expect(chasmcmd.buf[10] == 0x00)
+        #expect(chasmcmd.buf[11] == 0x00)
+        #expect(chasmcmd.buf[12] == 0x00)
+        #expect(chasmcmd.buf[13] == 0x00)
+        #expect(chasmcmd.buf[14] == 0x00)
+
+        switch chasmcmd.preprocInput[2] {
+        case .directive(let directive):
             #expect(directive.name == ".SUB")
             #expect(directive.content == "FOO:")
             #expect(directive.newPC == 4096)
@@ -60,7 +86,7 @@ struct chasmTest {
             #expect(Bool(false))
         }
 
-        switch chasmcmd.preprocInput[2] {
+        switch chasmcmd.preprocInput[3] {
         case .directive(let directive):
             #expect(directive.name == ".ENDSUB")
             #expect(directive.content == "")
@@ -71,7 +97,7 @@ struct chasmTest {
             #expect(Bool(false))
         }
         
-        switch chasmcmd.preprocInput[3] {
+        switch chasmcmd.preprocInput[4] {
         case .directive(let directive):
             #expect(directive.name == ".INCLUDE")
             #expect(directive.content == "INCTEST.CHASM")
@@ -83,7 +109,7 @@ struct chasmTest {
         }
         
         //;.def FOO $100
-        switch chasmcmd.preprocInput[4] {
+        switch chasmcmd.preprocInput[5] {
         case .directive(let directive):
             #expect(directive.name == ".DEF")
             #expect(directive.content == "")
@@ -95,7 +121,7 @@ struct chasmTest {
         }
         
         //;.sub fcn:
-        switch chasmcmd.preprocInput[5] {
+        switch chasmcmd.preprocInput[6] {
         case .directive(let directive):
             #expect(directive.name == ".SUB")
             #expect(directive.content == "FCN:")
@@ -107,7 +133,7 @@ struct chasmTest {
         }
         
         //;nop
-        switch chasmcmd.preprocInput[6] {
+        switch chasmcmd.preprocInput[7] {
         case .directive:
             fallthrough
         case .empty:
@@ -118,7 +144,7 @@ struct chasmTest {
         }
         
         //;@local:
-        switch chasmcmd.preprocInput[7] {
+        switch chasmcmd.preprocInput[8] {
         case .directive:
             fallthrough
         case .empty:
@@ -130,7 +156,7 @@ struct chasmTest {
         }
         
         //;rts
-        switch chasmcmd.preprocInput[8] {
+        switch chasmcmd.preprocInput[9] {
         case .directive:
             fallthrough
         case .empty:
@@ -141,7 +167,7 @@ struct chasmTest {
         }
         
         //;.endsub
-        switch chasmcmd.preprocInput[9] {
+        switch chasmcmd.preprocInput[10] {
         case .directive(let directive):
             #expect(directive.name == ".ENDSUB")
             #expect(directive.content == "")

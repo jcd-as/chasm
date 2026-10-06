@@ -6,7 +6,7 @@
 //
 // TODO:
 // P1
-// * directives: .incbin
+// * 
 // P2
 // * support basic math on symbols (esp +[offset])
 // * error handling - better error messages from closer to failure site
@@ -376,7 +376,6 @@ public struct Chasm: ParsableCommand {
 		return offset
 	}
 
-	// TODO: handle all directives: .incbin
 	public mutating func directive(_ line: String, number: UInt16, from pc: UInt16) -> Line?
 	{
 		// strip off comments
@@ -395,7 +394,6 @@ public struct Chasm: ParsableCommand {
 
 		let content = parts.count < 2 ? "" : String(parts[1]).trimmingCharacters(in: .whitespaces).uppercased()
 		var npc = pc
-		// TODO: impl .incbin
 		switch name {
 		case ".MAC":
 			// we're now processing a macro def (ignoring, really)
@@ -423,6 +421,23 @@ public struct Chasm: ParsableCommand {
 			lines.insert(contentsOf: inclines, at: Int(number+1))
 			return Line.directive(DirectiveLine(
 				linenum: number, offset: pc, name: name, content: content, newPC: pc))
+		case ".INCBIN":
+			if parts.count != 2 {
+				err("missing filename in .INCBIN directive", line: number)
+				abort()
+			}
+			let fname = String(parts[1]).trimmingCharacters(in: .whitespaces)
+			let fileURL = URL(fileURLWithPath: fname)
+			var len = 0
+			do {
+				let values = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+		        len = values.fileSize! // size in bytes
+	        } catch {
+				err("cannot access file in .INCBIN directive: '\(fname)'", line: number)
+				abort()
+	        }
+			return Line.directive(DirectiveLine(
+				linenum: number, offset: pc, name: name, content: fname, newPC: pc+UInt16(len)))
 		case ".SUB":
 			// 'content' should be a valid label
 			if !content.hasSuffix(":") {
@@ -862,7 +877,6 @@ public struct Chasm: ParsableCommand {
 	}
 
 	public mutating func generateForDirective(_ line: DirectiveLine, from: inout UInt16) {
-		// TODO: impl all directives: .incbin...
 		// if a new pc (address) was set, use it
 		if let newpc = line.newPC {
 			let len = Int(newpc) - Int(from)
@@ -882,6 +896,17 @@ public struct Chasm: ParsableCommand {
 			break
 		case ".ORG":
 			break
+		case ".INCBIN":
+			let fname = line.content.trimmingCharacters(in: .whitespaces)
+			let fileURL = URL(fileURLWithPath: fname)
+			do {
+				let data = try Data(contentsOf: fileURL)
+				let bytes = ContiguousArray<UInt8>(data)
+				buf.append(contentsOf: bytes)
+			} catch {
+				err("invalid .INCBIN file: '\(fname)'", line: line.linenum)
+				abort()
+			}
 		case ".DATA":
 			// .DATA $ea $ff $01 $00 $ea ; generates the literal bytes ea ff 01 00 ea
 			let parts = line.content.split { $0.isWhitespace }
