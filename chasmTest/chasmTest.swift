@@ -53,7 +53,7 @@ struct chasmTest {
         case .directive(let directive):
             #expect(directive.name == ".INCBIN")
             #expect(directive.content == "inc.bin")
-            #expect(directive.newPC == 4096)
+            #expect(directive.newPC == 4111)
         case .code:
             fallthrough
         case .empty:
@@ -79,7 +79,7 @@ struct chasmTest {
         case .directive(let directive):
             #expect(directive.name == ".SUB")
             #expect(directive.content == "FOO:")
-            #expect(directive.newPC == 4096)
+            #expect(directive.newPC == 4111)
         case .code:
             fallthrough
         case .empty:
@@ -90,7 +90,7 @@ struct chasmTest {
         case .directive(let directive):
             #expect(directive.name == ".ENDSUB")
             #expect(directive.content == "")
-            #expect(directive.newPC == 4096)
+            #expect(directive.newPC == 4111)
         case .code:
             fallthrough
         case .empty:
@@ -101,7 +101,7 @@ struct chasmTest {
         case .directive(let directive):
             #expect(directive.name == ".INCLUDE")
             #expect(directive.content == "INCTEST.CHASM")
-            #expect(directive.newPC == 4096)
+            #expect(directive.newPC == 4111)
         case .code:
             fallthrough
         case .empty:
@@ -125,7 +125,7 @@ struct chasmTest {
         case .directive(let directive):
             #expect(directive.name == ".SUB")
             #expect(directive.content == "FCN:")
-            #expect(directive.newPC == 4096)
+            #expect(directive.newPC == 4111)
         case .code:
             fallthrough
         case .empty:
@@ -140,7 +140,7 @@ struct chasmTest {
             #expect(Bool(false))
         case .code(let c):
             #expect(c.op?.mnemonic == "NOP")
-            #expect(c.offset == 4096)
+            #expect(c.offset == 4111)
         }
         
         //;@local:
@@ -152,7 +152,7 @@ struct chasmTest {
         case .code(let c):
             #expect(c.op?.mnemonic == nil)
             #expect(c.label == "FCN@LOCAL")
-            #expect(c.offset == 4097)
+            #expect(c.offset == 4112)
         }
         
         //;rts
@@ -163,7 +163,7 @@ struct chasmTest {
             #expect(Bool(false))
         case .code(let c):
             #expect(c.op?.mnemonic == "RTS")
-            #expect(c.offset == 4097)
+            #expect(c.offset == 4112)
         }
         
         //;.endsub
@@ -171,7 +171,7 @@ struct chasmTest {
         case .directive(let directive):
             #expect(directive.name == ".ENDSUB")
             #expect(directive.content == "")
-            #expect(directive.newPC == 4098)
+            #expect(directive.newPC == 4113)
         case .code:
             fallthrough
         case .empty:

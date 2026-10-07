@@ -9,8 +9,6 @@
 // * 
 // P2
 // * support basic math on symbols (esp +[offset])
-// * error handling - better error messages from closer to failure site
-// * error handling - keep emitting errors through each pass & only fail at end of pass
 // * will need (at least) .RORG directive to support loadable segments (i.e. for NES cartridge RAM)
 // *
 
@@ -81,6 +79,9 @@ public struct Chasm: ParsableCommand {
 	// macro name->definition map
 	var macros: [String:Macro] = [:]
 
+	// error tracking. 0 = no error, non-0 = error
+	var error = 0
+
 	// explicit public init is needed
 	public init() {
 		buf.reserveCapacity(64 * 1024)
@@ -109,6 +110,7 @@ public struct Chasm: ParsableCommand {
 		// pre-process:
 		//  - expand macros
 		preprocess()
+		if error != 0 { end() }
 
 		// first pass, scan line by line, tracking:
 		//  - handle directives (.org etc) & update pc/offset
@@ -117,11 +119,13 @@ public struct Chasm: ParsableCommand {
 		//  - enter new labels (addresses) into symbol table, look up referenced labels
 		//  - (leaves forward references for jmp/jsr/branch)
 		passOne()
+		if error != 0 { end() }
 
 		// second pass, re-read w/ completed symbol table:
 		//  - resolve forward referenced labels
 		//  - finish translating mnemonics to opcodes with final addresses
 		passTwo()
+		if error != 0 { end() }
 
 		// write to output file in given format (raw for now?)
 		var outURL: URL
@@ -210,8 +214,7 @@ public struct Chasm: ParsableCommand {
 		}
 		// if we're in a macro definition still, error
 		if mac.count > 0 {
-			err("missing .ENDMAC directive: un-closed macro definition", line: UInt16(linenum))
-			abort()
+			err("missing .ENDMAC directive: un-closed macro definition", errval: -1, line: UInt16(linenum))
 		}
 	}
 
@@ -257,14 +260,12 @@ public struct Chasm: ParsableCommand {
 		} else if ln.hasPrefix(".MAC") {
 			// if we're already defining a mac, error
 			if mac.count > 0 {
-				err("nested macros are not allowed", line: number)
-				abort()
+				err("nested macros are not allowed", errval: -1, line: number)
 			}
 			// check for .MAC macro definition
 			let msplit = ln.split(maxSplits: 2) { $0.isWhitespace }
 			if msplit.count < 2 {
-				err("invalid .MAC: '\(line)': no name", line: number)
-				abort()
+				err("invalid .MAC: '\(line)': no name", errval: -1, line: number)
 			}
 			// 3rd field is number of arguments
 			if msplit.count == 3 {
@@ -290,8 +291,7 @@ public struct Chasm: ParsableCommand {
 				if ln.trimmingCharacters(in: .whitespaces).hasPrefix(m.key) {
 					// are there the right number of parameters?
 					if args.count != m.value.numargs {
-						err("wrong number of parameters to macro '\(m.key)'", line: number)
-						abort()
+						err("wrong number of parameters to macro '\(m.key)'", errval: -1, line: number)
 					}
 
 					// replace the line with the lines stored in macros
@@ -356,8 +356,7 @@ public struct Chasm: ParsableCommand {
 				// if the directive changed the pc, change it
 				if let npc = dir.newPC {
 					if npc < offset {
-						err("directive cannot set org prior to current location", line: number)
-						abort()
+						err("directive cannot set org prior to current location", errval: -2, line: number)
 					}
 					offset = npc
 				}
@@ -405,17 +404,15 @@ public struct Chasm: ParsableCommand {
 			return Line.empty(0)
 		case ".INCLUDE":
 			if parts.count != 2 {
-				err("missing filename in .INCLUDE directive", line: number)
-				abort()
+				err("missing filename in .INCLUDE directive", errval: -2, line: number)
 			}
 			let fname = String(parts[1]).trimmingCharacters(in: .whitespaces)
 			let fileURL = URL(fileURLWithPath: fname)
-			var filecontents: String
+			var filecontents = ""
 			do {
 				filecontents = try String(contentsOf: fileURL, encoding: .utf8)
 			} catch {
-				err("invalid .INCLUDE file: '\(fname)'", line: number)
-				abort()
+				err("invalid .INCLUDE file: '\(fname)'", errval: -2, line: number)
 			}
 			let inclines = filecontents.components(separatedBy: .newlines)
 			lines.insert(contentsOf: inclines, at: Int(number+1))
@@ -423,8 +420,7 @@ public struct Chasm: ParsableCommand {
 				linenum: number, offset: pc, name: name, content: content, newPC: pc))
 		case ".INCBIN":
 			if parts.count != 2 {
-				err("missing filename in .INCBIN directive", line: number)
-				abort()
+				err("missing filename in .INCBIN directive", errval: -2, line: number)
 			}
 			let fname = String(parts[1]).trimmingCharacters(in: .whitespaces)
 			let fileURL = URL(fileURLWithPath: fname)
@@ -433,27 +429,23 @@ public struct Chasm: ParsableCommand {
 				let values = try fileURL.resourceValues(forKeys: [.fileSizeKey])
 		        len = values.fileSize! // size in bytes
 	        } catch {
-				err("cannot access file in .INCBIN directive: '\(fname)'", line: number)
-				abort()
+				err("cannot access file in .INCBIN directive: '\(fname)'", errval: -2, line: number)
 	        }
 			return Line.directive(DirectiveLine(
 				linenum: number, offset: pc, name: name, content: fname, newPC: pc+UInt16(len)))
 		case ".SUB":
 			// 'content' should be a valid label
 			if !content.hasSuffix(":") {
-				err("invalid .SUB label: '\(content)', missing ':'", line: number)
-				abort()
+				err("invalid .SUB label: '\(content)', missing ':'", errval: -2, line: number)
 			}
 			let label = String(content.dropLast(1))
 			if !validLabel(label) {
-				err("invalid .SUB label: '\(content)'", line: number)
-				abort()
+				err("invalid .SUB label: '\(content)'", errval: -2, line: number)
 			}
 			// TODO: this code is the same as in code() below...
 			// check for dups
 			if symbolTable[label] != nil {
-				err("symbol redefinition: '\(label)'", line: number)
-				abort()
+				err("symbol redefinition: '\(label)'", errval: -2, line: number)
 			}
 			// add label to symbol table with current pc
 			symbolTable[label] = pc
@@ -469,8 +461,7 @@ public struct Chasm: ParsableCommand {
 			if let n = parseNum(content) {
 				npc = n
 			} else {
-				err("invalid number '\(content)'", line: number)
-				abort()
+				err("invalid number '\(content)'", errval: -2, line: number)
 			}
 			return Line.directive(DirectiveLine(
 				linenum: number, offset: pc, name: name, content: content, newPC: npc))
@@ -488,8 +479,7 @@ public struct Chasm: ParsableCommand {
 				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
 					npc += len
 				} else {
-					err("invalid .BYTE directive count: \(parts[1])", line: number)
-					abort()
+					err("invalid .BYTE directive count: \(parts[1])", errval: -2, line: number)
 				}
 			} else {
 				npc += 1
@@ -504,8 +494,7 @@ public struct Chasm: ParsableCommand {
 				if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
 					npc += len * 2
 				} else {
-					err("invalid .BYTE directive count: \(parts[1])", line: number)
-					abort()
+					err("invalid .BYTE directive count: \(parts[1])", errval: -2, line: number)
 				}
 			} else {
 				npc += 2
@@ -521,33 +510,30 @@ public struct Chasm: ParsableCommand {
 			// parse out symbol & value from 'content'
 			let contentparts = content.split(maxSplits: 1) { $0.isWhitespace }
 			if contentparts.count != 2 {
-				err("invalid .DEF: '\(content)'", line: number)
-				abort()
+				err("invalid .DEF: '\(content)'", errval: -2, line: number)
 			}
 			let lhs = String(contentparts[0].trimmingCharacters(in: .whitespaces))
 			let rhs = String(contentparts[1].trimmingCharacters(in: .whitespaces))
 			if !validLabel(lhs) {
-				err("invalid .DEF symbol name: '\(lhs)'", line: number)
-				abort()
+				err("invalid .DEF symbol name: '\(lhs)'", errval: -2, line: number)
 			}
 
 			if let n = parseNum(rhs) {
 				// check for dups
 				if symbolTable[lhs] != nil {
-					err(".DEF symbol redefinition: '\(lhs)'", line: number)
-					abort()
+					err(".DEF symbol redefinition: '\(lhs)'", errval: -2, line: number)
 				}
 				// enter into symbol table
 				symbolTable[lhs] = n
 				return Line.directive(DirectiveLine(
 					linenum: number, offset: pc, name: name, content: "", newPC: nil))
 			} else {
-				err("invalid .DEF value: '\(rhs)'", line: number)
-				abort()
+				err("invalid .DEF value: '\(rhs)'", errval: -2, line: number)
 			}
 		default:
 			return nil
 		}
+		return nil
 	}
 
 	public mutating func code(_ line: String, number: UInt16, from pc: UInt16) -> CodeLine? {
@@ -570,13 +556,11 @@ public struct Chasm: ParsableCommand {
 		if ssplit.count == 2 {
 			label = String(ssplit[0]).uppercased()
 			if !validLabel(label) {
-				err("invalid label", line: number)
-				abort()
+				err("invalid label", errval: -2, line: number)
 			}
 			// ensure col 0 is non-whitespace
 			if label[label.startIndex].isWhitespace {
-				err("labels must start in the first column", line: number)
-				abort()
+				err("labels must start in the first column", errval: -2, line: number)
 			}
 			// if we're in a sub we need to check for local labels and prepend the sub name to them
 			if sub.count > 0 {
@@ -586,8 +570,7 @@ public struct Chasm: ParsableCommand {
 			}
 			// check for dups
 			if symbolTable[label] != nil {
-				err("symbol redefinition: '\(label)'", line: number)
-				abort()
+				err("symbol redefinition: '\(label)'", errval: -2, line: number)
 			}
 			// add label to symbol table with current pc
 			symbolTable[label] = pc
@@ -599,12 +582,10 @@ public struct Chasm: ParsableCommand {
 		if code.count > 0 {
 			// split1 by whitespace for opcode & args
 			let codesplit = code.split(maxSplits: 1) { $0.isWhitespace }
-            //if codesplit.count > 0 { // will be zero if it was just whitespace to the right
 			let opcode = codesplit[0].uppercased()
 			// check opcode validity
 			if !validOpcode(opcode) {
-				err("invalid opcode '\(opcode)'", line: number)
-				abort()
+				err("invalid opcode '\(opcode)'", errval: -2, line: number)
 			}
 			var arg1 = ""
 			var arg2 = ""
@@ -631,18 +612,15 @@ public struct Chasm: ParsableCommand {
 					let opc = Opcode(hex: hex, mnemonic: opcode, mode: amode)
 					return CodeLine(
 						linenum: number, offset: pc, label: label, op: opc, arg1: arg1, arg2: arg2)
-				} else {
-					err("invalid opcode or addressing mode", line: number)
-					abort()
 				}
 			} else {
-				err("invalid addressing mode in args: '\(stripped)'", line: number)
-				abort()
+				err("invalid addressing mode in args: '\(stripped)'", errval: -2, line: number)
 			}
 		} else {
 			// label-only, no opcode or args
 			return CodeLine(linenum: number, offset: pc, label: label, op: nil, arg1: "", arg2: "")
 		}
+		return nil
 	}
 
 	// if input is a number, returns it as a UInt16,
@@ -768,7 +746,6 @@ public struct Chasm: ParsableCommand {
 			}
 			// one arg and it's an address
 			let optn = parseNum(arg1)
-			//if parseNum(arg1) != nil {
 			if let n = optn {
 				// arg1 is 16bit address
 				if n > 255 {
@@ -881,14 +858,12 @@ public struct Chasm: ParsableCommand {
 		if let newpc = line.newPC {
 			let len = Int(newpc) - Int(from)
 			if len < 0 {
-				err("invalid \(line.name) directive", line: line.linenum)
-				abort()
+				err("invalid \(line.name) directive", errval: -3, line: line.linenum)
 			}
 			from = newpc
 		} else {
 			if line.name != ".DEF" {
-				err("invalid \(line.name) directive", line: line.linenum)
-				abort()
+				err("invalid \(line.name) directive", errval: -3, line: line.linenum)
 			}
 		}
 		switch line.name {
@@ -904,8 +879,7 @@ public struct Chasm: ParsableCommand {
 				let bytes = ContiguousArray<UInt8>(data)
 				buf.append(contentsOf: bytes)
 			} catch {
-				err("invalid .INCBIN file: '\(fname)'", line: line.linenum)
-				abort()
+				err("invalid .INCBIN file: '\(fname)'", errval: -3, line: line.linenum)
 			}
 		case ".DATA":
 			// .DATA $ea $ff $01 $00 $ea ; generates the literal bytes ea ff 01 00 ea
@@ -913,8 +887,7 @@ public struct Chasm: ParsableCommand {
 			for part in parts {
 				if let val = parseNum(String(part.trimmingCharacters(in: .whitespaces))) {
 					if val > 255 {
-						err(".DATA directive value >255: \(parts[0])", line: line.linenum)
-						abort()
+						err(".DATA directive value >255: \(parts[0])", errval: -3, line: line.linenum)
 					}
 					buf.append(UInt8(val))
 				}
@@ -924,8 +897,7 @@ public struct Chasm: ParsableCommand {
 			let parts = line.content.split(separator: ",", maxSplits: 1)
 			if let val = parseNum(String(parts[0].trimmingCharacters(in: .whitespaces))) {
 				if val > 255 {
-					err(".BYTE directive value >255: \(parts[0])", line: line.linenum)
-					abort()
+					err(".BYTE directive value >255: \(parts[0])", errval: -3, line: line.linenum)
 				}
 				if parts.count == 2 {
 					if let len = parseNum(String(parts[1].trimmingCharacters(in: .whitespaces))) {
@@ -934,15 +906,13 @@ public struct Chasm: ParsableCommand {
 							buf.append(UInt8(val))
 						}
 					} else {
-						err("invalid .BYTE directive count: \(parts[1])", line: line.linenum)
-						abort()
+						err("invalid .BYTE directive count: \(parts[1])", errval: -3, line: line.linenum)
 					}
 				} else {
 					buf.append(UInt8(val))
 				}
 			} else {
-				err("invalid .BYTE directive value: \(parts[0])", line: line.linenum)
-				abort()
+				err("invalid .BYTE directive value: \(parts[0])", errval: -3, line: line.linenum)
 			}
 		case ".WORD":
 			let parts = line.content.split(separator: ",", maxSplits: 1)
@@ -957,8 +927,7 @@ public struct Chasm: ParsableCommand {
 							buf.append(high)
 						}
 					} else {
-						err("invalid .WORD directive count: \(parts[1])", line: line.linenum)
-						abort()
+						err("invalid .WORD directive count: \(parts[1])", errval: -3, line: line.linenum)
 					}
 				} else {
 					let low = lowByte(val)
@@ -967,23 +936,20 @@ public struct Chasm: ParsableCommand {
 					buf.append(high)
 				}
 			} else {
-				err("invalid .WORD directive value: \(parts[0])", line: line.linenum)
-				abort()
+				err("invalid .WORD directive value: \(parts[0])", errval: -3, line: line.linenum)
 			}
 			break
 		case ".STRING":
 			// ensure this is a "" enclosed string
 			if line.content.first != "\"" || line.content.last != "\"" {
-				err("invalid .STRING directive value: \(line.content)", line: line.linenum)
+				err("invalid .STRING directive value: \(line.content)", errval: -3, line: line.linenum)
 			}
 			// TODO: replace escaped quotes (\") in content
 			for c in line.content.trimmingCharacters(in: CharacterSet(charactersIn: "\"")) {
 				if let ascii = c.asciiValue {
 					buf.append(ascii)
 				} else {
-					err(
-						"invalid .STRING directive value, non-ascii characters: \(line.content)",
-						line: line.linenum)
+					err("invalid .STRING directive value, non-ascii characters: \(line.content)", errval: -3, line: line.linenum)
 				}
 			}
 			break
@@ -1020,8 +986,7 @@ public struct Chasm: ParsableCommand {
 					if n < 256 {
 						buf.append(UInt8(n))
 					} else {
-						err("branch is out of reach", line: line.linenum)
-						abort()
+						err("branch is out of reach", errval: -3, line: line.linenum)
 					}
 				} else {
 					// if arg is a label, get the label address
@@ -1029,8 +994,7 @@ public struct Chasm: ParsableCommand {
 						// distance from (current addr+2) to target MUST be from -128 to +127
 						let delta = Int(target) - (Int(line.offset) + 2)
 						if delta > 127 || delta < -128 {
-							err("branch is out of reach", line: line.linenum)
-							abort()
+							err("branch is out of reach", errval: -3, line: line.linenum)
 						}
 						let sbyte = Int8(delta)
 						let byte = UInt8(bitPattern: sbyte)
@@ -1166,10 +1130,11 @@ public struct Chasm: ParsableCommand {
 
 	func fatal(_ msg: String) -> Never {
 		print("\(input): fatal: \(msg)")
-		abort()
+		_exit(1)
 	}
 
-	func err(_ msg: String, line: UInt16) {
+	mutating func err(_ msg: String, errval: Int, line: UInt16) {
+		error = errval
 		print("\(input):\(line+1): error: \(msg)")
 	}
 
@@ -1181,5 +1146,10 @@ public struct Chasm: ParsableCommand {
 		#if DEBUG
 			print("debug: \(msg)")
 		#endif
+	}
+
+	func end() {
+		print("assembly failed. exiting with errors")
+		_exit(Int32(error))
 	}
 }

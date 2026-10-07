@@ -3,7 +3,7 @@
 .def CTRL1  		$d011
 .def RASTER 		$d012
 .def IRQ_MSK		$d019
-.def IRQ_EN			$d01A
+.def IRQ_EN		$d01A
 .def BORDER 		$d020
 
 .def IRQ_VEC_LOW	$0314
