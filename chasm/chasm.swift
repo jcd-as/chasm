@@ -93,10 +93,10 @@ public struct Chasm: ParsableCommand {
 	@Option(name: [.short, .long], help: "output filename")
 	var output: String?
 
-	@Flag(name: [.customShort("d"), .long], help: "produce c64 header?")
+	@Flag(name: [.customShort("d"), .long], help: "produce c64 prg header")
 	var header: Int
 
-	@Flag(name: [.short, .long], help: "produce DASM-compatible symbol file?")
+	@Flag(name: [.short, .long], help: "produce DASM-compatible symbol file")
 	var symbols: Int
 
 	// MARK: main entry point
@@ -138,6 +138,7 @@ public struct Chasm: ParsableCommand {
 		var data = buf.withUnsafeBytes { rawbuf in
 			Data(bytes: rawbuf.baseAddress!, count: rawbuf.count)
 		}
+		// TODO: if we add more output headers / formats, then we need to add them here
 		// if -d, add a header with the initial org
 		if header != 0 {
 			let org = initialOrg
@@ -145,6 +146,9 @@ public struct Chasm: ParsableCommand {
 			let low = lowByte(org)
 			data.insert(high, at: 0)
 			data.insert(low, at: 0)
+			print("writing C-64 header")
+		} else {
+			print("writing raw binary (no header)")
 		}
 		do {
 			try data.write(to: outURL, options: [.atomic])
