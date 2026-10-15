@@ -8,7 +8,6 @@
 // P1
 // * 
 // P2
-// * support basic math on symbols (esp +[offset])
 // * will need (at least) .RORG directive to support loadable segments (i.e. for NES cartridge RAM)
 // *
 
@@ -687,7 +686,7 @@ public struct Chasm: ParsableCommand {
 				if !c.isLetter && c != "_" && c != "@" {
 					return false
 				}
-			} else if !c.isLetter && !c.isNumber && c != "_" {
+			} else if !c.isLetter && !c.isNumber && c != "_" && c != "+" {
 			 	return false
 			}
 		}
@@ -704,7 +703,7 @@ public struct Chasm: ParsableCommand {
 			return false
 		}
 		for c in label {
-			if !c.isLetter && !c.isNumber && c != "_" && c != "<" && c != ">" {
+			if !c.isLetter && !c.isNumber && c != "_" {
 				return false
 			}
 		}
@@ -1037,7 +1036,7 @@ public struct Chasm: ParsableCommand {
 		fatal("invalid immediate value: '\(immed)'")
 	}
 
-	// get a word for a symbol, respecting </> operators
+	// get a word for a symbol, respecting <>+ operators
 	func wordForSymbol(_ sym: String) -> UInt16? {
 		var getLow: Bool = false
 		var getHigh: Bool = false
@@ -1051,15 +1050,25 @@ public struct Chasm: ParsableCommand {
 		} else {
 			s = sym
 		}
+		// strip off any addition operator
+		let sides = s.split(separator: "+", maxSplits: 1)
+		var offset:UInt8  = 0
+		if sides.count > 1 {
+			s = String(sides[0])
+			if let n = UInt8(sides[1]) {
+				print("offset = \(n)")
+				offset = n
+			}
+		}
 
 		let optn = symbolTable[s]
 		if let n = optn {
 			if getLow {
-				return UInt16(lowByte(n))
+				return UInt16(lowByte(n)+offset)
 			} else if getHigh {
-				return UInt16(highByte(n))
+				return UInt16(highByte(n)+offset)
 			} else {
-				return n
+				return n+UInt16(offset)
 			}
 		} else {
 			return nil
